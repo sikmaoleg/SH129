@@ -38,19 +38,6 @@ $metaDescription = 'Местное отделение «Молодой Гвар�
 <body>
 <a class="skip-link" href="#main">Перейти к содержимому</a>
 
-<div class="header-utility">
-  <div class="container">
-    <span class="org-label">Местное отделение · Щёлковский городской округ</span>
-    <?php if ($me): ?>
-      <a href="<?= url(homeForRole($me['role'])) ?>"><?= e($me['first_name']) ?> — личный кабинет</a>
-      <a href="<?= url('logout.php') ?>">Выйти</a>
-    <?php else: ?>
-      <a href="<?= url('login.php') ?>">Вход</a>
-      <a href="<?= url('register.php') ?>">Регистрация</a>
-    <?php endif; ?>
-  </div>
-</div>
-
 <header class="site-header">
   <div class="container">
     <div class="header-shell">
@@ -61,6 +48,7 @@ $metaDescription = 'Местное отделение «Молодой Гвар�
         <div class="header-tools">
           <?php if ($me): ?>
             <a href="<?= url(homeForRole($me['role'])) ?>" class="btn-join">Личный кабинет</a>
+            <a href="<?= url('logout.php') ?>" class="btn-login">Выйти</a>
           <?php else: ?>
             <a href="<?= url('login.php') ?>" class="btn-login">Вход</a>
             <a href="<?= url('register.php') ?>" class="btn-join">Стать волонтёром</a>
