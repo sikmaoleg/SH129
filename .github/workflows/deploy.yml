@@ -15,17 +15,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Debug FTP connectivity
-        env:
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-        run: |
-          echo "--- domains/sh-129-mg.ru/ ---"
-          timeout 20 curl -s --max-time 15 -u "$FTP_USERNAME:$FTP_PASSWORD" "ftp://$FTP_SERVER/domains/sh-129-mg.ru/" || echo "EXIT CODE: $?"
-
       - name: Deploy public_html to FTP
-        if: false # temporarily disabled while diagnosing the FTP hang
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -35,11 +25,9 @@ jobs:
           # пробует FTPS и зависает на рукопожатии, если сервер его не поддерживает.
           protocol: ftp
           local-dir: ./public_html/
-          # Если после первого деплоя файлы окажутся не в том месте (например,
-          # реальный корень сайта на хостинге называется не так, как FTP-логин
-          # по умолчанию), поменяйте server-dir на нужный путь, например:
-          # server-dir: ./domains/sh-129-mg.ru/public_html/
-          server-dir: ./
+          # Подтверждено через FTP-листинг: реальный докрут сайта — не корень
+          # FTP-аккаунта, а domains/sh-129-mg.ru/public_html/.
+          server-dir: ./domains/sh-129-mg.ru/public_html/
           exclude: |
             **/.git*
             **/.git*/**
