@@ -21,12 +21,8 @@ jobs:
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
-          echo "--- plain PASV listing (default) ---"
-          timeout 25 curl -v --max-time 20 -u "$FTP_USERNAME:$FTP_PASSWORD" "ftp://$FTP_SERVER/" || echo "EXIT CODE: $?"
-          echo "--- with --ftp-skip-pasv-ip (fix for PASV returning private/internal IP) ---"
-          timeout 25 curl -v --max-time 20 --ftp-skip-pasv-ip -u "$FTP_USERNAME:$FTP_PASSWORD" "ftp://$FTP_SERVER/" || echo "EXIT CODE: $?"
-          echo "--- active mode (--ftp-port -) ---"
-          timeout 25 curl -v --max-time 20 --ftp-port - -u "$FTP_USERNAME:$FTP_PASSWORD" "ftp://$FTP_SERVER/" || echo "EXIT CODE: $?"
+          echo "--- domains/ ---"
+          timeout 20 curl -s --max-time 15 -u "$FTP_USERNAME:$FTP_PASSWORD" "ftp://$FTP_SERVER/domains/" || echo "EXIT CODE: $?"
 
       - name: Deploy public_html to FTP
         if: false # temporarily disabled while diagnosing the FTP hang
