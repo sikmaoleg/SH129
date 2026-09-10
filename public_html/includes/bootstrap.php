@@ -132,9 +132,6 @@ if (session_status() === PHP_SESSION_NONE) {
         'secure'   => str_starts_with($config['base_url'] ?? '', 'https://'),
     ]);
     session_start();
-    header('X-Debug-Secure-Computed: ' . (str_starts_with($config['base_url'] ?? '', 'https://') ? 'TRUE' : 'FALSE'));
-    header('X-Debug-Cookie-Params: ' . json_encode(session_get_cookie_params()));
-    header('X-Debug-Ini-Secure: ' . ini_get('session.cookie_secure'));
 }
 
 // ---------------------------------------------------------------------
