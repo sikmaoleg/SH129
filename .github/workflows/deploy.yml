@@ -21,8 +21,8 @@ jobs:
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
-          echo "--- domains/ ---"
-          timeout 20 curl -s --max-time 15 -u "$FTP_USERNAME:$FTP_PASSWORD" "ftp://$FTP_SERVER/domains/" || echo "EXIT CODE: $?"
+          echo "--- domains/sh-129-mg.ru/ ---"
+          timeout 20 curl -s --max-time 15 -u "$FTP_USERNAME:$FTP_PASSWORD" "ftp://$FTP_SERVER/domains/sh-129-mg.ru/" || echo "EXIT CODE: $?"
 
       - name: Deploy public_html to FTP
         if: false # temporarily disabled while diagnosing the FTP hang
