@@ -75,6 +75,9 @@ $metaDescription = 'Местное отделение «Молодой Гвар�
           <?php foreach ($navItems as $key => [$label, $href]): ?>
             <li><a href="<?= url($href) ?>" class="<?= $activeNav === $key ? 'is-active' : '' ?>"><?= e($label) ?></a></li>
           <?php endforeach; ?>
+          <li><a class="nav-cta" href="<?= url($me ? homeForRole($me['role']) : 'register.php') ?>">
+            <?= icon('arrow-right') ?><?= $me ? 'Личный кабинет' : 'Стать волонтёром' ?>
+          </a></li>
         </ul>
       </nav>
     </div>

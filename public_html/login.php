@@ -53,11 +53,12 @@ require __DIR__ . '/includes/header.php';
         <?= csrfField() ?>
         <div class="field">
           <label for="email">Электронная почта</label>
-          <input type="email" id="email" name="email" value="<?= e($email) ?>" required autofocus>
+          <input type="email" id="email" name="email" value="<?= e($email) ?>" required autofocus
+                 inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false">
         </div>
         <div class="field">
           <label for="password">Пароль</label>
-          <input type="password" id="password" name="password" required>
+          <input type="password" id="password" name="password" required autocomplete="current-password">
         </div>
         <button type="submit" class="btn btn-primary btn-block">Войти</button>
       </form>

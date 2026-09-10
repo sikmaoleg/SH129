@@ -85,7 +85,7 @@ require __DIR__ . '/../includes/panel_header.php';
 
   <?php if ($users): ?>
     <div class="card-body card-body-flush table-wrap">
-      <table class="data">
+      <table class="data cards">
         <thead>
           <tr><th>Волонтёр</th><th>Контакты</th><th>Роль</th><th>Позиция</th><th>Очки</th><th>Часы</th><th>Статус</th><th>Действия</th></tr>
         </thead>
@@ -96,8 +96,8 @@ require __DIR__ . '/../includes/panel_header.php';
                 <b><?= e($u['last_name'] . ' ' . $u['first_name']) ?></b>
                 <div style="font-size:.79rem;color:var(--muted);">в движении с <?= e(ruDate($u['created_at'])) ?></div>
               </td>
-              <td style="font-size:.85rem;color:var(--muted);"><?= e($u['email']) ?><br><?= e($u['phone'] ?: '—') ?></td>
-              <td>
+              <td data-label="Контакты" style="font-size:.85rem;color:var(--muted);"><?= e($u['email']) ?><br><?= e($u['phone'] ?: '—') ?></td>
+              <td data-label="Роль">
                 <form method="post" class="inline-form" style="margin:0;">
                   <?= csrfField() ?>
                   <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
@@ -110,7 +110,7 @@ require __DIR__ . '/../includes/panel_header.php';
                   </select>
                 </form>
               </td>
-              <td>
+              <td data-label="Позиция">
                 <form method="post" class="inline-form" style="margin:0;">
                   <?= csrfField() ?>
                   <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
@@ -123,16 +123,16 @@ require __DIR__ . '/../includes/panel_header.php';
                   </select>
                 </form>
               </td>
-              <td class="num"><?= (int)$u['points'] ?></td>
-              <td class="num"><?= rtrim(rtrim(number_format((float)$u['hours'], 1, ',', ''), '0'), ',') ?></td>
-              <td>
+              <td class="num" data-label="Очки"><?= (int)$u['points'] ?></td>
+              <td class="num" data-label="Часы"><?= rtrim(rtrim(number_format((float)$u['hours'], 1, ',', ''), '0'), ',') ?></td>
+              <td data-label="Статус">
                 <?php if ($u['status'] === 'blocked'): ?>
                   <span class="tag tag-blocked">заблокирован</span>
                 <?php else: ?>
                   <span class="tag tag-approved">активен</span>
                 <?php endif; ?>
               </td>
-              <td>
+              <td data-label="Действия">
                 <div class="actions">
                   <a href="<?= url('admin/points.php?user_id='.(int)$u['id']) ?>" class="btn btn-outline btn-sm">Очки</a>
                   <?php if ((int)$u['id'] !== (int)$me['id']): ?>

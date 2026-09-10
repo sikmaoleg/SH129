@@ -138,7 +138,7 @@ require __DIR__ . '/../includes/panel_header.php';
       <?= csrfField() ?>
       <input type="hidden" name="action" value="mark">
       <div class="card-body card-body-flush table-wrap">
-        <table class="data">
+        <table class="data cards">
           <thead>
             <tr>
               <th>Волонтёр</th>
@@ -153,8 +153,8 @@ require __DIR__ . '/../includes/panel_header.php';
               <tr>
                 <td><b><?= e($r['last_name'] . ' ' . $r['first_name']) ?></b>
                     <div style="font-size:.79rem;color:var(--muted);">всего очков: <?= (int)$r['points'] ?></div></td>
-                <td style="color:var(--muted);font-size:.86rem;"><?= e($r['phone'] ?: '—') ?></td>
-                <td>
+                <td data-label="Телефон" style="color:var(--muted);font-size:.86rem;"><?= e($r['phone'] ?: '—') ?></td>
+                <td data-label="Отметка">
                   <select name="status[<?= (int)$r['id'] ?>]">
                     <option value="registered" <?= $r['status'] === 'registered' ? 'selected' : '' ?>>записан</option>
                     <option value="attended"   <?= $r['status'] === 'attended' ? 'selected' : '' ?>>участие принято</option>
@@ -162,11 +162,11 @@ require __DIR__ . '/../includes/panel_header.php';
                     <option value="cancelled"  <?= $r['status'] === 'cancelled' ? 'selected' : '' ?>>отменено</option>
                   </select>
                 </td>
-                <td>
+                <td data-label="Часы">
                   <input type="number" name="hours[<?= (int)$r['id'] ?>]" step="0.5" min="0" max="24"
                          value="<?= rtrim(rtrim(number_format((float)$r['hours'], 1, '.', ''), '0'), '.') ?>">
                 </td>
-                <td class="num" style="color:<?= (int)$r['points_awarded'] > 0 ? 'var(--ok)' : 'var(--muted)' ?>;">
+                <td class="num" data-label="Начислено" style="color:<?= (int)$r['points_awarded'] > 0 ? 'var(--ok)' : 'var(--muted)' ?>;">
                   <?= (int)$r['points_awarded'] > 0 ? '+' . (int)$r['points_awarded'] : '—' ?>
                 </td>
               </tr>

@@ -169,12 +169,14 @@ require __DIR__ . '/includes/header.php';
           <div class="field-row">
             <div class="field">
               <label for="email">Электронная почта <span class="req">*</span></label>
-              <input type="email" id="email" name="email" value="<?= e($old['email']) ?>" required>
+              <input type="email" id="email" name="email" value="<?= e($old['email']) ?>" required
+                     inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false">
               <div class="hint">Он же логин для входа в личный кабинет.</div>
             </div>
             <div class="field">
               <label for="phone">Телефон <span class="req">*</span></label>
-              <input type="tel" id="phone" name="phone" value="<?= e($old['phone']) ?>" placeholder="+7 900 000-00-00" required>
+              <input type="tel" id="phone" name="phone" value="<?= e($old['phone']) ?>" placeholder="+7 900 000-00-00" required
+                     inputmode="tel" autocomplete="tel">
             </div>
           </div>
 
