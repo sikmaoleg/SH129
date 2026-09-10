@@ -21,6 +21,9 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          # У SprintHost обычный FTP без TLS на 21 порту — по умолчанию экшен
+          # пробует FTPS и зависает на рукопожатии, если сервер его не поддерживает.
+          protocol: ftp
           local-dir: ./public_html/
           # Если после первого деплоя файлы окажутся не в том месте (например,
           # реальный корень сайта на хостинге называется не так, как FTP-логин
