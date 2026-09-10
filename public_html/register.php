@@ -15,7 +15,7 @@ $errors = [];
 $done   = false;
 $old    = [
     'last_name' => '', 'first_name' => '', 'middle_name' => '', 'email' => '',
-    'phone' => '', 'birth_date' => '', 'vk' => '', 'telegram' => '', 'school' => '', 'about' => '',
+    'phone' => '', 'birth_date' => '', 'vk' => '', 'telegram' => '', 'school' => '',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($closed)) {
@@ -75,8 +75,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($closed)) {
     // --- Сохранение ---
     if (!$errors) {
         q('INSERT INTO users (email, password_hash, last_name, first_name, middle_name,
-                              phone, birth_date, vk, telegram, school, about, role, status)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,\'volunteer\',\'pending\')', [
+                              phone, birth_date, vk, telegram, school, role, status)
+           VALUES (?,?,?,?,?,?,?,?,?,?,\'volunteer\',\'pending\')', [
             $old['email'],
             password_hash($password, PASSWORD_DEFAULT),
             $old['last_name'],
@@ -87,7 +87,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($closed)) {
             $old['vk'] ?: null,
             $old['telegram'] ?: null,
             $old['school'] ?: null,
-            $old['about'] ?: null,
         ]);
         $newId = (int)db()->lastInsertId();
         logAction('register', 'user', $newId, $old['email']);
@@ -193,11 +192,6 @@ require __DIR__ . '/includes/header.php';
           <div class="field">
             <label for="school">Школа, колледж или место работы</label>
             <input type="text" id="school" name="school" value="<?= e($old['school']) ?>">
-          </div>
-
-          <div class="field">
-            <label for="about">Чем хотели бы заниматься</label>
-            <textarea id="about" name="about" placeholder="Например: экология, помощь ветеранам, съёмка и монтаж"><?= e($old['about']) ?></textarea>
           </div>
 
           <div class="field-row">

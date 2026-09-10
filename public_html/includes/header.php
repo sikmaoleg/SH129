@@ -9,7 +9,6 @@ $navItems  = [
     'about'       => ['О нас',        'about.php'],
     'news'        => ['Новости',      'news.php'],
     'events'      => ['Мероприятия',  'events.php'],
-    'directions'  => ['Направления',  'about.php#directions'],
     'gallery'     => ['Фотогалерея',  'gallery.php'],
     'contacts'    => ['Контакты',     'contacts.php'],
 ];

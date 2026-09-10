@@ -20,9 +20,6 @@ $events = fetchAll(
      ORDER BY e.starts_at ASC LIMIT 4"
 );
 
-$directions = fetchAll('SELECT * FROM directions ORDER BY sort ASC, id ASC');
-$dirIcons = ['patriot' => 'flag', 'help' => 'heart-hand', 'eco' => 'leaf', 'media' => 'camera', 'sport' => 'dumbbell', 'school' => 'academic-cap'];
-
 // Показатели: если администратор не заполнил их вручную — считаем по базе
 $statVolunteers = (int)setting('stat_volunteers');
 if ($statVolunteers <= 0) {
@@ -51,19 +48,14 @@ require __DIR__ . '/includes/header.php';
         <a href="<?= url('events.php') ?>" class="btn btn-ghost">Ближайшие мероприятия</a>
       </div>
       <div class="hero-stats">
-        <div class="stat"><?= icon('users') ?><b><?= number_format($statVolunteers, 0, '.', ' ') ?></b><span><?= plural($statVolunteers, 'волонтёр', 'волонтёра', 'волонтёров') ?> в отделении</span></div>
-        <div class="stat"><?= icon('calendar') ?><b><?= number_format($statEvents, 0, '.', ' ') ?></b><span><?= plural($statEvents, 'мероприятие', 'мероприятия', 'мероприятий') ?> проведено</span></div>
-        <div class="stat"><?= icon('clock') ?><b><?= number_format($statHours, 0, '.', ' ') ?></b><span><?= plural($statHours, 'час', 'часа', 'часов') ?> добровольчества</span></div>
-        <div class="stat"><?= icon('grid') ?><b><?= count($directions) ?></b><span><?= plural(count($directions), 'направление', 'направления', 'направлений') ?> работы</span></div>
+        <div class="stat"><?= icon('users') ?><b><?= number_format($statVolunteers, 0, '.', ' ') ?>+</b><span><?= plural($statVolunteers, 'волонтёр', 'волонтёра', 'волонтёров') ?></span></div>
+        <div class="stat"><?= icon('calendar') ?><b><?= number_format($statEvents, 0, '.', ' ') ?></b><span><?= plural($statEvents, 'мероприятие', 'мероприятия', 'мероприятий') ?> в 2026 году</span></div>
+        <div class="stat"><?= icon('clock') ?><b><?= number_format($statHours, 0, '.', ' ') ?>+</b><span><?= plural($statHours, 'час', 'часа', 'часов') ?> добровольчества</span></div>
       </div>
     </div>
     <div class="hero-visual">
       <div class="hero-visual-card">
         <img src="<?= url('assets/img/team.webp') ?>" alt="Волонтёры «Молодой Гвардии» Щёлково">
-      </div>
-      <div class="hero-visual-badge">
-        <?= icon('badge-check') ?>
-        <div><b><?= plural(count($directions), 'направление', 'направления', 'направлений') ?></b><span>работы отделения</span></div>
       </div>
     </div>
   </div>
@@ -149,28 +141,6 @@ require __DIR__ . '/includes/header.php';
   </div>
 </section>
 
-<!-- ---------- Направления ---------- -->
-<section class="section" id="directions">
-  <div class="container">
-    <div class="section-head">
-      <div>
-        <span class="section-eyebrow">Чем мы занимаемся</span><h2>Направления работы</h2>
-        <p>Шесть направлений, в которых работает отделение. Волонтёр может участвовать в любом из них.</p>
-      </div>
-      <a href="<?= url('about.php') ?>" class="section-link">Подробнее об отделении →</a>
-    </div>
-    <div class="dir-grid">
-      <?php foreach ($directions as $i => $d): ?>
-        <div class="dir-card">
-          <div class="num"><?= icon($dirIcons[$d['slug']] ?? 'target') ?></div>
-          <h3><?= e($d['title']) ?></h3>
-          <p><?= e($d['description']) ?></p>
-        </div>
-      <?php endforeach; ?>
-    </div>
-  </div>
-</section>
-
 <!-- ---------- Галерея ---------- -->
 <section class="section section-alt">
   <div class="container">
@@ -219,7 +189,7 @@ require __DIR__ . '/includes/header.php';
         <b>01</b>
         <div>
           <h3>Заполните анкету</h3>
-          <p>Контакты, дата рождения и интересующие направления работы.</p>
+          <p>Контакты и дата рождения.</p>
         </div>
       </div>
       <div class="join-step">

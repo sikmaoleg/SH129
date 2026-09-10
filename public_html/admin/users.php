@@ -45,6 +45,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 logAction('user_role', 'user', $userId, $newRole);
                 flash('success', 'Роль изменена.');
                 break;
+            case 'position':
+                $newPosition = $_POST['position'] ?? 'volunteer';
+                if (!array_key_exists($newPosition, POSITION_LABELS)) {
+                    flash('error', 'Неизвестная позиция.');
+                    break;
+                }
+                q('UPDATE users SET position=? WHERE id=?', [$newPosition, $userId]);
+                logAction('user_position', 'user', $userId, $newPosition);
+                flash('success', 'Позиция изменена.');
+                break;
         }
     }
     redirect('admin/users.php' . (!empty($_POST['q']) ? '?q=' . urlencode((string)$_POST['q']) : ''));
@@ -77,7 +87,7 @@ require __DIR__ . '/../includes/panel_header.php';
     <div class="card-body card-body-flush table-wrap">
       <table class="data">
         <thead>
-          <tr><th>Волонтёр</th><th>Контакты</th><th>Роль</th><th>Очки</th><th>Часы</th><th>Статус</th><th>Действия</th></tr>
+          <tr><th>Волонтёр</th><th>Контакты</th><th>Роль</th><th>Позиция</th><th>Очки</th><th>Часы</th><th>Статус</th><th>Действия</th></tr>
         </thead>
         <tbody>
           <?php foreach ($users as $u): ?>
@@ -97,6 +107,19 @@ require __DIR__ . '/../includes/panel_header.php';
                     <option value="volunteer" <?= $u['role'] === 'volunteer' ? 'selected' : '' ?>>волонтёр</option>
                     <option value="admin"     <?= $u['role'] === 'admin' ? 'selected' : '' ?>>администратор</option>
                     <?php if (isDev()): ?><option value="dev" <?= $u['role'] === 'dev' ? 'selected' : '' ?>>разработчик</option><?php endif; ?>
+                  </select>
+                </form>
+              </td>
+              <td>
+                <form method="post" class="inline-form" style="margin:0;">
+                  <?= csrfField() ?>
+                  <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
+                  <input type="hidden" name="action" value="position">
+                  <input type="hidden" name="q" value="<?= e($search) ?>">
+                  <select name="position" onchange="this.form.submit()" <?= (int)$u['id'] === (int)$me['id'] ? 'disabled' : '' ?>>
+                    <?php foreach (POSITION_LABELS as $pv => $pl): ?>
+                      <option value="<?= e($pv) ?>" <?= ($u['position'] ?? 'volunteer') === $pv ? 'selected' : '' ?>><?= e($pl) ?></option>
+                    <?php endforeach; ?>
                   </select>
                 </form>
               </td>

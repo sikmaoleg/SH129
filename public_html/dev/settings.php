@@ -8,6 +8,8 @@ $activeItem   = 'settings';
 
 $editable = [
     'org_name'           => ['Название организации', 'text'],
+    'org_leader_name'    => ['ФИО руководителя местного отделения', 'text'],
+    'org_leader_phone'   => ['Телефон руководителя', 'text'],
     'org_email'          => ['Электронная почта', 'text'],
     'org_address'        => ['Адрес', 'text'],
     'org_vk'             => ['Ссылка на ВКонтакте', 'text'],

@@ -13,6 +13,14 @@ require __DIR__ . '/includes/header.php';
 <section class="section">
   <div class="container">
     <div class="dir-grid">
+      <?php if (setting('org_leader_name')): ?>
+      <div class="dir-card">
+        <div class="num"><?= icon('user-plus') ?></div>
+        <h3>Руководитель местного отделения</h3>
+        <p><?= e(setting('org_leader_name')) ?></p>
+        <?php if (setting('org_leader_phone')): ?><p><a href="tel:<?= e(preg_replace('/[^\d+]/', '', setting('org_leader_phone'))) ?>"><?= e(setting('org_leader_phone')) ?></a></p><?php endif; ?>
+      </div>
+      <?php endif; ?>
       <div class="dir-card">
         <div class="num"><?= icon('map-pin') ?></div>
         <h3>Адрес</h3>

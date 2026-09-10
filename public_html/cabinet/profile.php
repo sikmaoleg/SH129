@@ -110,6 +110,7 @@ require __DIR__ . '/../includes/panel_header.php';
         <table class="kv">
           <tr><th>Статус</th><td><span class="tag tag-approved">одобрена</span></td></tr>
           <tr><th>Роль</th><td><?= e(match ($me['role']) { 'dev' => 'разработчик', 'admin' => 'администратор', default => 'волонтёр' }) ?></td></tr>
+          <tr><th>Позиция</th><td><?= e(positionLabel($me['position'] ?? null)) ?></td></tr>
           <tr><th>Дата регистрации</th><td><?= e(ruDate($me['created_at'])) ?></td></tr>
           <tr><th>Одобрена</th><td><?= e(ruDate($me['approved_at'])) ?></td></tr>
         </table>

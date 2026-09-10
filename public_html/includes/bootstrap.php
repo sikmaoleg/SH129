@@ -220,6 +220,21 @@ function plural(int $n, string $one, string $few, string $many): string
 }
 
 // ---------------------------------------------------------------------
+// Роли (организационные позиции) волонтёров
+// ---------------------------------------------------------------------
+const POSITION_LABELS = [
+    'volunteer'   => 'Волонтёр',
+    'activist'    => 'Активист',
+    'staff'       => 'Член Аппарата',
+    'local_staff' => 'Член местного штаба',
+    'leader'      => 'Руководитель',
+];
+function positionLabel(?string $position): string
+{
+    return POSITION_LABELS[$position] ?? POSITION_LABELS['volunteer'];
+}
+
+// ---------------------------------------------------------------------
 // Уровни волонтёра
 // ---------------------------------------------------------------------
 function levels(): array

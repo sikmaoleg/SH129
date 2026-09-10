@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `about`          TEXT             NULL,
   `avatar`         VARCHAR(190)     NULL,
   `role`           ENUM('volunteer','admin','dev') NOT NULL DEFAULT 'volunteer',
+  `position`       ENUM('volunteer','activist','staff','local_staff','leader') NOT NULL DEFAULT 'volunteer',
   `status`         ENUM('pending','approved','rejected','blocked') NOT NULL DEFAULT 'pending',
   `points`         INT NOT NULL DEFAULT 0,
   `hours`          DECIMAL(7,1) NOT NULL DEFAULT 0,
