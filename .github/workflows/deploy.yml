@@ -15,7 +15,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Debug FTP connectivity
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          echo "--- plain PASV listing (default) ---"
+          timeout 25 curl -v --max-time 20 -u "$FTP_USERNAME:$FTP_PASSWORD" "ftp://$FTP_SERVER/" || echo "EXIT CODE: $?"
+          echo "--- with --ftp-skip-pasv-ip (fix for PASV returning private/internal IP) ---"
+          timeout 25 curl -v --max-time 20 --ftp-skip-pasv-ip -u "$FTP_USERNAME:$FTP_PASSWORD" "ftp://$FTP_SERVER/" || echo "EXIT CODE: $?"
+          echo "--- active mode (--ftp-port -) ---"
+          timeout 25 curl -v --max-time 20 --ftp-port - -u "$FTP_USERNAME:$FTP_PASSWORD" "ftp://$FTP_SERVER/" || echo "EXIT CODE: $?"
+
       - name: Deploy public_html to FTP
+        if: false # temporarily disabled while diagnosing the FTP hang
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
