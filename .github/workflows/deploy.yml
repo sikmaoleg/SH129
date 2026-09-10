@@ -1,0 +1,35 @@
+name: Deploy to SprintHost (FTP)
+
+on:
+  push:
+    branches:
+      - claude/ui-ux-pro-max-skill-setup-chuom5
+    paths:
+      - 'public_html/**'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy public_html to FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./public_html/
+          # Если после первого деплоя файлы окажутся не в том месте (например,
+          # реальный корень сайта на хостинге называется не так, как FTP-логин
+          # по умолчанию), поменяйте server-dir на нужный путь, например:
+          # server-dir: ./domains/sh-129-mg.ru/public_html/
+          server-dir: ./
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/config/config.php
+            **/storage/sessions/**
+            README.md

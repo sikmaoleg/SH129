@@ -1,0 +1,9 @@
+config/config.php
+uploads/avatars/*
+uploads/events/*
+uploads/news/*
+!uploads/*/.gitkeep
+storage/sessions/*
+!storage/sessions/.gitkeep
+*.log
+.DS_Store
