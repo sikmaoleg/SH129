@@ -120,12 +120,16 @@ if (session_status() === PHP_SESSION_NONE) {
         session_save_path($sessionDir);
     }
 
+    // secure-флаг куки сессии берём из протокола base_url, а не из $_SERVER['HTTPS']:
+    // на этом хостинге (обратный прокси перед PHP) HTTPS иногда непусто даже для
+    // обычных http-запросов. Кука с secure=true на http-сайте браузер никогда не
+    // отправит обратно — сессия молча "не сохраняется" на каждом запросе.
     session_set_cookie_params([
         'lifetime' => 0,
         'path'     => '/',
         'httponly' => true,
         'samesite' => 'Lax',
-        'secure'   => !empty($_SERVER['HTTPS']),
+        'secure'   => str_starts_with($config['base_url'] ?? '', 'https://'),
     ]);
     session_start();
 }
