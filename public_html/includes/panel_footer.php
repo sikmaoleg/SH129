@@ -17,6 +17,19 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!window.confirm(el.getAttribute('data-confirm'))) ev.preventDefault();
     });
   });
+
+  // Массовая простановка отметок участия — выставляет значение во всех
+  // селектах формы, сохранение всё равно требует отдельного нажатия «Сохранить»
+  document.querySelectorAll('[data-bulk-status]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var status = btn.getAttribute('data-bulk-status');
+      var form = btn.closest('form');
+      if (!form) return;
+      form.querySelectorAll('select[name^="status["]').forEach(function (sel) {
+        sel.value = status;
+      });
+    });
+  });
 });
 </script>
 </body>

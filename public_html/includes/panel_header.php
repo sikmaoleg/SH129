@@ -36,6 +36,8 @@ $menus = [
             'events'       => ['Мероприятия',          'admin/events.php',       'calendar'],
             'news'         => ['Новости',               'admin/news.php',         'clipboard'],
             'points'       => ['Начисление очков',      'admin/points.php',       'medal'],
+            'honor'        => ['Доска почёта',          'admin/honor.php',        'badge-check'],
+            'analytics'    => ['Аналитика',             'admin/analytics.php',    'chart-bar'],
         ],
     ],
     'dev' => [

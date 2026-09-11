@@ -28,6 +28,22 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  // Кнопка «скопировать ссылку» в блоке «Поделиться»
+  document.querySelectorAll('[data-copy-link]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var url = btn.getAttribute('data-copy-link');
+      var done = function () {
+        btn.classList.add('is-copied');
+        setTimeout(function () { btn.classList.remove('is-copied'); }, 1600);
+      };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(url).then(done).catch(function () { window.prompt('Скопируйте ссылку:', url); });
+      } else {
+        window.prompt('Скопируйте ссылку:', url);
+      }
+    });
+  });
+
   // Подтверждение опасных действий
   document.querySelectorAll('[data-confirm]').forEach(function (el) {
     el.addEventListener('click', function (ev) {

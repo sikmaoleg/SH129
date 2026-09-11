@@ -33,7 +33,8 @@ require __DIR__ . '/includes/header.php';
       <?php foreach (preg_split("/\R{2,}/", (string)$n['body']) as $para): ?>
         <?php if (trim($para) !== ''): ?><p><?= nl2br(e(trim($para))) ?></p><?php endif; ?>
       <?php endforeach; ?>
-      <p style="margin-top:32px;"><a href="<?= url('news.php') ?>" class="btn btn-outline">← Все новости</a></p>
+      <?= shareButtons(url('news-item.php?id=' . (int)$n['id']), $n['title']) ?>
+      <p style="margin-top:22px;"><a href="<?= url('news.php') ?>" class="btn btn-outline">← Все новости</a></p>
     </div>
   </div>
 </section>

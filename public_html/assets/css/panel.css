@@ -217,6 +217,23 @@ pre.code{background:var(--blue-950);color:#D6E4FF;padding:18px 20px;border-radiu
 .status-bad{display:inline-flex;align-items:center;gap:5px;color:var(--danger);font-weight:700;}
 .status-ok .icon,.status-bad .icon{width:15px;height:15px;}
 
+/* ---------- Столбчатые графики ---------- */
+.bar-chart{display:flex;align-items:flex-end;gap:10px;height:180px;padding-top:8px;}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;height:100%;}
+.bar-track{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center;}
+.bar-fill{width:70%;max-width:40px;background:var(--blue-600);border-radius:6px 6px 0 0;display:flex;align-items:flex-start;justify-content:center;color:#fff;font-size:.76rem;font-weight:700;padding-top:4px;min-height:0;transition:height .3s var(--ease);}
+.bar-fill-accent{background:var(--accent);}
+.bar-col span{margin-top:8px;font-size:.76rem;color:var(--muted);font-weight:600;}
+
+/* ---------- Горизонтальные графики ---------- */
+.hbar-chart{display:flex;flex-direction:column;gap:12px;}
+.hbar-row{display:grid;grid-template-columns:130px 1fr 34px;align-items:center;gap:12px;}
+.hbar-label{font-size:.86rem;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hbar-track{background:var(--bg);border-radius:20px;height:10px;overflow:hidden;}
+.hbar-fill{height:100%;background:linear-gradient(90deg,var(--blue-600),var(--accent));border-radius:20px;transition:width .3s var(--ease);}
+.hbar-value{font-size:.86rem;font-weight:700;color:var(--blue-900);text-align:right;}
+@media(max-width:520px){.hbar-row{grid-template-columns:90px 1fr 28px;gap:8px;}.hbar-label{font-size:.8rem;}}
+
 /* ---------- Пагинация ---------- */
 .pagination{display:flex;gap:7px;justify-content:center;margin-top:24px;flex-wrap:wrap;}
 .pagination a,.pagination span{padding:8px 14px;border:1px solid var(--line);border-radius:var(--radius-pill);font-size:.86rem;font-weight:600;background:#fff;}

@@ -107,7 +107,12 @@ require __DIR__ . '/includes/header.php';
             <button type="submit" class="btn btn-accent">Записаться на мероприятие</button>
           </form>
         <?php endif; ?>
+        <?php if (!$isPast): ?>
+          <a href="<?= url('event-ics.php?id=' . $id) ?>" class="btn btn-outline" style="margin-top:10px;"><?= icon('download') ?>Добавить в календарь</a>
+        <?php endif; ?>
       </div>
+
+      <?= shareButtons(url('event.php?id=' . $id), $ev['title']) ?>
     </div>
   </div>
 </section>

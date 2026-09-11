@@ -35,6 +35,7 @@ function icon(string $name, string $class = 'icon'): string
         'check'        => '<path d="m5 13 4.5 4.5L19 8"/>',
         'alert'        => '<path d="M12 3.5 21.5 20h-19L12 3.5Z"/><path d="M12 9.5v4.2"/><circle cx="12" cy="17" r=".9" fill="currentColor" stroke="none"/>',
         'download'     => '<path d="M12 3.5v11M8 11l4 4 4-4"/><path d="M4.5 17v2a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-2"/>',
+        'link'         => '<path d="M9.5 14.5 14.5 9.5"/><path d="M11 6.5 12.3 5.2a3.6 3.6 0 0 1 5.1 5.1L16 11.6"/><path d="M13 17.5 11.7 18.8a3.6 3.6 0 0 1-5.1-5.1L8 12.4"/>',
     ];
     $body = $paths[$name] ?? $paths['check'];
     return '<svg class="' . htmlspecialchars($class, ENT_QUOTES) . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $body . '</svg>';

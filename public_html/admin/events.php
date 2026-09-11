@@ -46,11 +46,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 logAction('event_update', 'event', $id, $title);
                 flash('success', 'Мероприятие обновлено.');
             } else {
-                q('INSERT INTO events (title, description, direction_id, starts_at, location, capacity, points_reward, status, created_by)
-                   VALUES (?,?,?,?,?,?,?,?,?)',
-                  [$title, $description, $directionId, $startsAt, $location, $capacity, $pointsReward, $status, (int)$me['id']]);
-                logAction('event_create', 'event', (int)db()->lastInsertId(), $title);
-                flash('success', 'Мероприятие создано.');
+                // Повтор доступен только при создании — набор новых мероприятий по одному шаблону
+                $repeatOn    = !empty($_POST['repeat_enable']);
+                $repeatFreq  = $_POST['repeat_freq'] ?? 'weekly';
+                $repeatCount = $repeatOn ? max(1, min(26, (int)($_POST['repeat_count'] ?? 1))) : 1;
+                $interval    = match ($repeatFreq) {
+                    'biweekly' => '+2 weeks',
+                    'monthly'  => '+1 month',
+                    default    => '+1 week',
+                };
+
+                $created = 0;
+                $ts = new DateTime($startsAt);
+                for ($i = 0; $i < $repeatCount; $i++) {
+                    q('INSERT INTO events (title, description, direction_id, starts_at, location, capacity, points_reward, status, created_by)
+                       VALUES (?,?,?,?,?,?,?,?,?)',
+                      [$title, $description, $directionId, $ts->format('Y-m-d H:i:s'), $location, $capacity, $pointsReward, $status, (int)$me['id']]);
+                    $created++;
+                    if ($i === 0) {
+                        logAction('event_create', 'event', (int)db()->lastInsertId(), $title);
+                    }
+                    $ts = (clone $ts)->modify($interval);
+                }
+                flash('success', $created > 1
+                    ? "Создано {$created} мероприятий по шаблону («" . match ($repeatFreq) { 'biweekly' => 'раз в 2 недели', 'monthly' => 'ежемесячно', default => 'еженедельно' } . "»)."
+                    : 'Мероприятие создано.');
             }
             redirect('admin/events.php');
         }
@@ -126,6 +146,30 @@ require __DIR__ . '/../includes/panel_header.php';
 
       <div class="field"><label for="description">Описание</label>
         <textarea id="description" name="description" placeholder="Что будем делать, что взять с собой, как добраться"><?= e($edit['description'] ?? '') ?></textarea></div>
+
+      <?php if (!$edit): ?>
+        <div class="field">
+          <label class="field-check">
+            <input type="checkbox" id="repeat_enable" name="repeat_enable" value="1">
+            <span>Сделать повторяющимся — создать сразу несколько мероприятий по этому шаблону</span>
+          </label>
+        </div>
+        <div class="field-row-3" id="repeatOptions" style="display:none;">
+          <div class="field"><label for="repeat_freq">Периодичность</label>
+            <select id="repeat_freq" name="repeat_freq">
+              <option value="weekly">Каждую неделю</option>
+              <option value="biweekly">Раз в 2 недели</option>
+              <option value="monthly">Каждый месяц</option>
+            </select></div>
+          <div class="field"><label for="repeat_count">Сколько раз (включая первое)</label>
+            <input type="number" id="repeat_count" name="repeat_count" min="1" max="26" value="4"></div>
+        </div>
+        <script>
+          document.getElementById('repeat_enable').addEventListener('change', function () {
+            document.getElementById('repeatOptions').style.display = this.checked ? 'grid' : 'none';
+          });
+        </script>
+      <?php endif; ?>
 
       <button type="submit" class="btn btn-primary"><?= $edit ? 'Сохранить изменения' : 'Создать мероприятие' ?></button>
     </form>

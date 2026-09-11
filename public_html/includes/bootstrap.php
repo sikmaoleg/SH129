@@ -146,6 +146,21 @@ function url(string $path = ''): string
     global $config;
     return rtrim($config['base_url'] ?? '', '/') . '/' . ltrim($path, '/');
 }
+/** Блок кнопок «Поделиться»: ВК, Telegram, копирование ссылки */
+function shareButtons(string $pageUrl, string $title): string
+{
+    $u = urlencode($pageUrl);
+    $t = urlencode($title);
+    $vk = "https://vk.com/share.php?url={$u}&title={$t}";
+    $tg = "https://t.me/share/url?url={$u}&text={$t}";
+    return '<div class="share-row">'
+        . '<span class="share-label">Поделиться:</span>'
+        . '<a href="' . e($vk) . '" target="_blank" rel="noopener" class="share-btn" aria-label="ВКонтакте">' . icon('users') . '</a>'
+        . '<a href="' . e($tg) . '" target="_blank" rel="noopener" class="share-btn" aria-label="Telegram">' . icon('telegram') . '</a>'
+        . '<button type="button" class="share-btn" data-copy-link="' . e($pageUrl) . '" aria-label="Скопировать ссылку">' . icon('link') . '</button>'
+        . '</div>';
+}
+
 function redirect(string $path): never
 {
     header('Location: ' . (str_starts_with($path, 'http') ? $path : url($path)));

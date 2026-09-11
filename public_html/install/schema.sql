@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `telegram`       VARCHAR(190)     NULL,
   `school`         VARCHAR(190)     NULL,
   `about`          TEXT             NULL,
+  `coordinator_notes` TEXT          NULL,
   `avatar`         VARCHAR(190)     NULL,
   `role`           ENUM('volunteer','admin','dev') NOT NULL DEFAULT 'volunteer',
   `position`       ENUM('volunteer','activist','staff','local_staff','leader') NOT NULL DEFAULT 'volunteer',

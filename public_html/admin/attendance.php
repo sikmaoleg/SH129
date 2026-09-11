@@ -115,7 +115,8 @@ require __DIR__ . '/../includes/panel_header.php';
       <p><?= e(ruDate($event['starts_at'], true)) ?><?= $event['location'] ? ' · ' . e($event['location']) : '' ?>
          · за участие <?= (int)$event['points_reward'] ?> <?= plural((int)$event['points_reward'], 'очко', 'очка', 'очков') ?></p>
     </div>
-    <div style="display:flex;gap:8px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="<?= url('admin/export.php?type=event&event_id='.$eventId) ?>" class="btn btn-outline btn-sm"><?= icon('download') ?>Экспорт CSV</a>
       <a href="<?= url('admin/events.php?edit='.$eventId) ?>" class="btn btn-outline btn-sm">Править</a>
       <?php if ($event['status'] !== 'finished'): ?>
         <form method="post" style="margin:0;">
@@ -137,6 +138,12 @@ require __DIR__ . '/../includes/panel_header.php';
     <form method="post">
       <?= csrfField() ?>
       <input type="hidden" name="action" value="mark">
+      <?php if ($isPast): ?>
+        <div class="card-body" style="padding-bottom:0;display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-outline btn-sm" data-bulk-status="attended">Отметить всех пришедшими</button>
+          <button type="button" class="btn btn-outline btn-sm" data-bulk-status="no_show">Отметить всех неявившимися</button>
+        </div>
+      <?php endif; ?>
       <div class="card-body card-body-flush table-wrap">
         <table class="data cards">
           <thead>

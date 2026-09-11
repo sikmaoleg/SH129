@@ -34,6 +34,9 @@ if ($statHours <= 0) {
     $statHours = (int)fetchValue('SELECT COALESCE(SUM(hours),0) FROM users');
 }
 
+$honorId = (int)setting('honor_user_id');
+$honor   = $honorId > 0 ? fetchOne("SELECT * FROM users WHERE id = ? AND status = 'approved'", [$honorId]) : null;
+
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -60,6 +63,29 @@ require __DIR__ . '/includes/header.php';
     </div>
   </div>
 </section>
+
+<?php if ($honor): ?>
+<!-- ---------- Доска почёта ---------- -->
+<section class="section" style="padding-top:0;">
+  <div class="container">
+    <div class="honor-card">
+      <div class="honor-avatar">
+        <?php if ($honor['avatar']): ?>
+          <img src="<?= url('uploads/avatars/' . $honor['avatar']) ?>" alt="">
+        <?php else: ?>
+          <span><?= e(mb_substr($honor['first_name'], 0, 1) . mb_substr($honor['last_name'], 0, 1)) ?></span>
+        <?php endif; ?>
+      </div>
+      <div class="honor-body">
+        <span class="honor-eyebrow"><?= icon('medal') ?>Волонтёр месяца</span>
+        <h3><?= e($honor['last_name'] . ' ' . $honor['first_name']) ?></h3>
+        <?php if (setting('honor_note')): ?><p><?= e(setting('honor_note')) ?></p><?php endif; ?>
+      </div>
+      <a href="<?= url('team.php') ?>" class="btn btn-outline btn-sm">Вся команда →</a>
+    </div>
+  </div>
+</section>
+<?php endif; ?>
 
 <!-- ---------- Новости ---------- -->
 <section class="section">

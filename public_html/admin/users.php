@@ -76,11 +76,14 @@ require __DIR__ . '/../includes/panel_header.php';
 <div class="card">
   <div class="card-head">
     <div><h2>Список волонтёров — <?= count($users) ?></h2><p>Одобренные учётные записи отделения</p></div>
-    <form method="get" class="inline-form">
-      <input type="text" name="q" value="<?= e($search) ?>" placeholder="Поиск по имени, почте, телефону">
-      <button type="submit" class="btn btn-outline btn-sm">Найти</button>
-      <?php if ($search !== ''): ?><a href="<?= url('admin/users.php') ?>" class="btn btn-outline btn-sm">Сброс</a><?php endif; ?>
-    </form>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <form method="get" class="inline-form">
+        <input type="text" name="q" value="<?= e($search) ?>" placeholder="Поиск по имени, почте, телефону">
+        <button type="submit" class="btn btn-outline btn-sm">Найти</button>
+        <?php if ($search !== ''): ?><a href="<?= url('admin/users.php') ?>" class="btn btn-outline btn-sm">Сброс</a><?php endif; ?>
+      </form>
+      <a href="<?= url('admin/export.php?type=users' . ($search !== '' ? '&q=' . urlencode($search) : '')) ?>" class="btn btn-outline btn-sm"><?= icon('download') ?>Экспорт CSV</a>
+    </div>
   </div>
 
   <?php if ($users): ?>
@@ -93,7 +96,7 @@ require __DIR__ . '/../includes/panel_header.php';
           <?php foreach ($users as $u): ?>
             <tr>
               <td>
-                <b><?= e($u['last_name'] . ' ' . $u['first_name']) ?></b>
+                <b><a href="<?= url('admin/volunteer.php?id=' . (int)$u['id']) ?>"><?= e($u['last_name'] . ' ' . $u['first_name']) ?></a></b>
                 <div style="font-size:.79rem;color:var(--muted);">в движении с <?= e(ruDate($u['created_at'])) ?></div>
               </td>
               <td data-label="Контакты" style="font-size:.85rem;color:var(--muted);"><?= e($u['email']) ?><br><?= e($u['phone'] ?: '—') ?></td>

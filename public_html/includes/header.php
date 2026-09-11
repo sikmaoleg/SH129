@@ -7,6 +7,7 @@ $me        = currentUser();
 $navItems  = [
     ''            => ['Главная',      'index.php'],
     'about'       => ['О нас',        'about.php'],
+    'team'        => ['Команда',      'team.php'],
     'news'        => ['Новости',      'news.php'],
     'events'      => ['Мероприятия',  'events.php'],
     'gallery'     => ['Фотогалерея',  'gallery.php'],

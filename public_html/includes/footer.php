@@ -10,6 +10,7 @@
         <div class="footer-col">
           <h4>О движении</h4>
           <a href="<?= url('about.php') ?>">О нас</a>
+          <a href="<?= url('team.php') ?>">Команда</a>
           <a href="<?= url('news.php') ?>">Новости</a>
           <a href="<?= url('gallery.php') ?>">Фотогалерея</a>
         </div>
