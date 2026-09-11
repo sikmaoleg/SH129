@@ -161,17 +161,21 @@ h1,h2,h3,h4{line-height:1.14;font-weight:800;color:var(--blue-900);letter-spacin
 .hero-visual{position:relative;align-self:stretch;display:flex;align-items:center;}
 .hero-visual-card{position:relative;border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-lg);aspect-ratio:4/5;width:100%;}
 .hero-visual-card img{width:100%;height:100%;object-fit:cover;}
-.hero-visual-card::after{content:'';position:absolute;inset:0;background:linear-gradient(200deg,transparent 40%,rgba(5,15,38,.65) 100%);}
-.hero-visual-badge{position:absolute;left:-18px;bottom:34px;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);color:var(--blue-900);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:12px;max-width:230px;}
-.hero-visual-badge .icon{width:26px;height:26px;color:var(--accent);flex:none;}
-.hero-visual-badge b{display:block;font-size:.92rem;font-weight:800;}
-.hero-visual-badge span{font-size:.78rem;color:var(--muted);}
+.hero-visual-card::after{content:'';position:absolute;inset:0;background:linear-gradient(200deg,transparent 40%,rgba(5,15,38,.65) 100%);pointer-events:none;}
+
+/* ---------- Слайдер фото в hero ---------- */
+.hero-slide{position:absolute;inset:0;opacity:0;transition:opacity 1.1s var(--ease);}
+.hero-slide.is-active{opacity:1;}
+.hero-slider-dots{position:absolute;left:0;right:0;bottom:18px;z-index:2;display:flex;justify-content:center;gap:7px;}
+.hero-slider-dots button{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.45);padding:0;transition:background var(--dur) var(--ease),transform var(--dur) var(--ease);cursor:pointer;}
+.hero-slider-dots button:hover{background:rgba(255,255,255,.75);}
+.hero-slider-dots button.is-active{background:#fff;transform:scale(1.3);}
+
 @media(max-width:980px){
   .hero{padding:32px 0 0;}
   .hero .container{grid-template-columns:1fr;gap:28px;}
   .hero-visual{order:-1;max-width:420px;margin-inline:auto;width:100%;}
   .hero-visual-card{aspect-ratio:16/10;}
-  .hero-visual-badge{left:8px;bottom:16px;}
 }
 @media(max-width:700px){
   .hero{padding:22px 0 0;}
@@ -192,8 +196,6 @@ h1,h2,h3,h4{line-height:1.14;font-weight:800;color:var(--blue-900);letter-spacin
   .hero-stats .stat span{font-size:.72rem;}
   .hero-visual{max-width:none;}
   .hero-visual-card{aspect-ratio:16/11;}
-  .hero-visual-badge{max-width:200px;padding:12px 15px;}
-  .hero-visual-badge .icon{width:22px;height:22px;}
 }
 
 /* ---------- Секции ---------- */

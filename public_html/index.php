@@ -4,6 +4,16 @@ require_once __DIR__ . '/includes/bootstrap.php';
 $pageTitle = 'Молодая Гвардия · Щёлково — волонтёрское движение округа';
 $activeNav = '';
 
+// Те же фото, что в галерее — держим порядок в согласии с gallery.php
+$heroPhotos = [
+    ['team.webp',     'Команда отделения'],
+    ['march.webp',    'Городское шествие'],
+    ['creative.webp', 'Съёмка команды'],
+    ['rink.webp',     'Спортивное мероприятие'],
+    ['cake.webp',     'День рождения отделения'],
+    ['rain.webp',     'Работаем в любую погоду'],
+];
+
 $news = fetchAll(
     "SELECT id, title, excerpt, cover, published_at
      FROM news WHERE status = 'published' AND published_at <= NOW()
@@ -57,8 +67,17 @@ require __DIR__ . '/includes/header.php';
       </div>
     </div>
     <div class="hero-visual">
-      <div class="hero-visual-card">
-        <img src="<?= url('assets/img/team.webp') ?>" alt="Волонтёры «Молодой Гвардии» Щёлково">
+      <div class="hero-visual-card hero-slider" id="heroSlider">
+        <?php foreach ($heroPhotos as $i => [$file, $caption]): ?>
+          <div class="hero-slide <?= $i === 0 ? 'is-active' : '' ?>">
+            <img src="<?= url('assets/img/' . $file) ?>" alt="<?= e($caption) ?>" <?= $i === 0 ? '' : 'loading="lazy"' ?>>
+          </div>
+        <?php endforeach; ?>
+        <div class="hero-slider-dots">
+          <?php foreach ($heroPhotos as $i => [$file, $caption]): ?>
+            <button type="button" class="<?= $i === 0 ? 'is-active' : '' ?>" data-slide="<?= $i ?>" aria-label="Фото: <?= e($caption) ?>"></button>
+          <?php endforeach; ?>
+        </div>
       </div>
     </div>
   </div>
