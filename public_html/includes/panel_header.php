@@ -35,7 +35,8 @@ $menus = [
             'users'        => ['Волонтёры',            'admin/users.php',        'users'],
             'events'       => ['Мероприятия',          'admin/events.php',       'calendar'],
             'news'         => ['Новости',               'admin/news.php',         'clipboard'],
-            'points'       => ['Начисление очков',      'admin/points.php',       'medal'],
+            'points'       => ['Начисление баллов',     'admin/points.php',       'medal'],
+            'rating'       => ['Рейтинг',               'admin/rating.php',       'target'],
             'honor'        => ['Доска почёта',          'admin/honor.php',        'badge-check'],
             'analytics'    => ['Аналитика',             'admin/analytics.php',    'chart-bar'],
         ],
@@ -51,6 +52,21 @@ $menus = [
     ],
 ];
 $menu = $menus[$panelSection];
+
+// VK-стиль для личного кабинета волонтёра: обложка, круглый аватар, строка статистики, вкладки
+$vkProfile = null;
+if ($panelSection === 'cabinet' && $me) {
+    $vkAttended = (int)fetchValue(
+        "SELECT COUNT(*) FROM event_registrations WHERE user_id = ? AND status = 'attended'", [(int)$me['id']]
+    );
+    $vkProfile = [
+        'name'     => trim($me['last_name'] . ' ' . $me['first_name']),
+        'position' => positionLabel($me['position'] ?? null),
+        'attended' => $vkAttended,
+        'points'   => (int)$me['points'],
+        'initials' => mb_substr($me['first_name'], 0, 1) . mb_substr($me['last_name'], 0, 1),
+    ];
+}
 ?><!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -115,13 +131,40 @@ $menu = $menus[$panelSection];
   </aside>
 
   <div class="panel-main">
-    <div class="panel-top">
-      <h1><?= e($panelTitle) ?></h1>
-      <div class="who">
-        <b><?= e($me['last_name'] . ' ' . $me['first_name']) ?></b>
-        · <?= e(match ($me['role']) { 'dev' => 'разработчик', 'admin' => 'администратор', default => 'волонтёр' }) ?>
+    <?php if ($vkProfile): ?>
+      <div class="vk-profile">
+        <div class="vk-cover"></div>
+        <div class="vk-profile-body">
+          <div class="vk-avatar">
+            <?php if (!empty($me['avatar'])): ?>
+              <img src="<?= url('uploads/avatars/' . $me['avatar']) ?>" alt="">
+            <?php else: ?>
+              <span><?= e($vkProfile['initials']) ?></span>
+            <?php endif; ?>
+          </div>
+          <h1><?= e($vkProfile['name']) ?></h1>
+          <div class="vk-position"><?= e($vkProfile['position']) ?></div>
+          <div class="vk-stats">
+            <a href="<?= url('cabinet/events.php') ?>"><b><?= $vkProfile['attended'] ?></b> <?= plural($vkProfile['attended'], 'мероприятие', 'мероприятия', 'мероприятий') ?></a>
+            <span class="vk-stats-dot">·</span>
+            <a href="<?= url('cabinet/rating.php') ?>"><b><?= $vkProfile['points'] ?></b> <?= plural($vkProfile['points'], 'балл', 'балла', 'баллов') ?></a>
+          </div>
+        </div>
+        <nav class="vk-tabs">
+          <?php foreach ($menu['items'] as $key => [$label, $href, $ic]): ?>
+            <a href="<?= url($href) ?>" class="<?= $activeItem === $key ? 'is-active' : '' ?>"><?= e($label) ?></a>
+          <?php endforeach; ?>
+        </nav>
       </div>
-    </div>
+    <?php else: ?>
+      <div class="panel-top">
+        <h1><?= e($panelTitle) ?></h1>
+        <div class="who">
+          <b><?= e($me['last_name'] . ' ' . $me['first_name']) ?></b>
+          · <?= e(match ($me['role']) { 'dev' => 'разработчик', 'admin' => 'администратор', default => 'волонтёр' }) ?>
+        </div>
+      </div>
+    <?php endif; ?>
 
     <div class="panel-body" id="panel-main">
       <?php foreach (takeFlash() as $f): ?>

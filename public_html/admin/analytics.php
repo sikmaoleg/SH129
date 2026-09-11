@@ -99,7 +99,7 @@ require __DIR__ . '/../includes/panel_header.php';
 </div>
 
 <div class="card">
-  <div class="card-head"><div><h2>Сводка за период</h2><p>Выгрузка в CSV: новые волонтёры, мероприятия, очки, часы</p></div></div>
+  <div class="card-head"><div><h2>Сводка за период</h2><p>Выгрузка в CSV: новые волонтёры, мероприятия, баллы</p></div></div>
   <div class="card-body">
     <form method="get" action="<?= url('admin/export.php') ?>" class="inline-form">
       <input type="hidden" name="type" value="summary">

@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $rows = fetchAll(
-    "SELECT r.status, r.hours, r.points_awarded, r.comment,
+    "SELECT r.status, r.points_awarded, r.comment,
             e.id, e.title, e.starts_at, e.location, d.title AS direction_title
      FROM event_registrations r
      JOIN events e ON e.id = r.event_id
@@ -85,7 +85,7 @@ require __DIR__ . '/../includes/panel_header.php';
   <?php if ($past): ?>
     <div class="card-body card-body-flush table-wrap">
       <table class="data cards">
-        <thead><tr><th>Дата</th><th>Мероприятие</th><th>Статус</th><th>Часы</th><th>Очки</th></tr></thead>
+        <thead><tr><th>Дата</th><th>Мероприятие</th><th>Статус</th><th>Баллы</th></tr></thead>
         <tbody>
           <?php foreach ($past as $r): [$label, $cls] = $statusLabels[$r['status']]; ?>
             <tr>
@@ -93,8 +93,7 @@ require __DIR__ . '/../includes/panel_header.php';
               <td data-label="Мероприятие"><?= e($r['title']) ?>
                   <?php if ($r['comment']): ?><div style="font-size:.8rem;color:var(--muted);"><?= e($r['comment']) ?></div><?php endif; ?></td>
               <td data-label="Статус"><span class="tag <?= $cls ?>"><?= $label ?></span></td>
-              <td class="num" data-label="Часы"><?= $r['hours'] > 0 ? rtrim(rtrim(number_format((float)$r['hours'], 1, ',', ''), '0'), ',') : '—' ?></td>
-              <td class="num" data-label="Очки" style="color:var(--ok);"><?= (int)$r['points_awarded'] > 0 ? '+'.(int)$r['points_awarded'] : '—' ?></td>
+              <td class="num" data-label="Баллы" style="color:var(--ok);"><?= (int)$r['points_awarded'] > 0 ? '+'.(int)$r['points_awarded'] : '—' ?></td>
             </tr>
           <?php endforeach; ?>
         </tbody>

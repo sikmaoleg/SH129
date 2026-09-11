@@ -79,7 +79,7 @@ h1,h2,h3,h4{line-height:1.14;font-weight:800;color:var(--blue-900);letter-spacin
 /* ---------- Плавающая шапка-капсула ---------- */
 .site-header{position:sticky;top:0;z-index:60;padding:14px 0 0;padding-top:max(14px,env(safe-area-inset-top));}
 .header-shell{background:rgba(10,20,50,.72);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-pill);box-shadow:0 12px 40px -14px rgba(5,12,35,.55);color:#fff;}
-.header-main{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:9px 10px 9px 22px;}
+.header-main{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:9px 22px;}
 .brand{display:flex;align-items:center;gap:14px;flex:none;}
 .brand img{height:38px;width:auto;}
 .brand-caption{display:none;}

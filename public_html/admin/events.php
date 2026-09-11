@@ -179,7 +179,7 @@ require __DIR__ . '/../includes/panel_header.php';
 <div class="card">
   <div class="card-head">
     <div><h2><?= $filter === 'past' ? 'Прошедшие' : 'Предстоящие' ?> мероприятия</h2>
-      <p><?= $filter === 'past' ? 'Отметьте участие, чтобы начислить очки волонтёрам.' : 'Открыта запись волонтёров.' ?></p></div>
+      <p><?= $filter === 'past' ? 'Отметьте участие, чтобы начислить баллы волонтёрам.' : 'Открыта запись волонтёров.' ?></p></div>
     <div style="display:flex;gap:8px;">
       <a href="<?= url('admin/events.php') ?>" class="btn btn-sm <?= $filter !== 'past' ? 'btn-primary' : 'btn-outline' ?>">Предстоящие</a>
       <a href="<?= url('admin/events.php?filter=past') ?>" class="btn btn-sm <?= $filter === 'past' ? 'btn-primary' : 'btn-outline' ?>">Прошедшие</a>

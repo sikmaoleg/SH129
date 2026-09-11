@@ -3,30 +3,35 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 $me = requireAdmin();
 
 $panelSection = 'admin';
-$panelTitle   = 'Начисление очков';
+$panelTitle   = 'Начисление баллов';
 $activeItem   = 'points';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrfCheck();
-    $userId = (int)($_POST['user_id'] ?? 0);
-    $points = (int)($_POST['points'] ?? 0);
-    $reason = trim((string)($_POST['reason'] ?? ''));
-    $hours  = round((float)($_POST['hours'] ?? 0), 1);
+    $userIds = array_values(array_unique(array_map('intval', (array)($_POST['user_ids'] ?? []))));
+    $points  = (int)($_POST['points'] ?? 0);
+    $reason  = trim((string)($_POST['reason'] ?? ''));
 
-    $target = $userId ? fetchOne("SELECT * FROM users WHERE id=? AND status='approved'", [$userId]) : null;
+    $targets = $userIds ? fetchAll(
+        'SELECT * FROM users WHERE status=\'approved\' AND id IN (' . implode(',', array_fill(0, count($userIds), '?')) . ')',
+        $userIds
+    ) : [];
 
-    if (!$target) {
-        flash('error', 'Волонтёр не найден или его учётная запись не одобрена.');
-    } elseif ($points === 0 && $hours == 0) {
-        flash('error', 'Укажите количество очков или часов.');
+    if (!$targets) {
+        flash('error', 'Выберите хотя бы одного волонтёра.');
+    } elseif ($points === 0) {
+        flash('error', 'Укажите количество баллов.');
     } elseif ($reason === '') {
         flash('error', 'Укажите причину начисления — она видна волонтёру в истории.');
     } elseif (abs($points) > 1000) {
-        flash('error', 'За одно начисление можно дать не больше 1000 очков.');
+        flash('error', 'За одно начисление можно дать не больше 1000 баллов.');
     } else {
-        awardPoints($userId, $points, $reason, null, $hours);
-        logAction('points_manual', 'user', $userId, $points . ' — ' . $reason);
-        flash('success', 'Начисление сохранено: ' . ($points > 0 ? '+' : '') . $points . ' для ' . $target['last_name'] . ' ' . $target['first_name'] . '.');
+        foreach ($targets as $target) {
+            awardPoints((int)$target['id'], $points, $reason);
+            logAction('points_manual', 'user', (int)$target['id'], $points . ' — ' . $reason);
+        }
+        flash('success', 'Начисление сохранено: ' . ($points > 0 ? '+' : '') . $points
+            . ' для ' . count($targets) . ' ' . plural(count($targets), 'волонтёра', 'волонтёров', 'волонтёров') . '.');
     }
     redirect('admin/points.php');
 }
@@ -47,37 +52,32 @@ require __DIR__ . '/../includes/panel_header.php';
 
 <div class="grid-2">
   <div class="card">
-    <div class="card-head"><div><h2>Ручное начисление</h2><p>Для случаев вне мероприятий: обучение, координация, помощь в срочной задаче.</p></div></div>
+    <div class="card-head"><div><h2>Начисление баллов</h2><p>Можно выбрать несколько волонтёров — баллы начислятся каждому.</p></div></div>
     <div class="card-body">
       <form method="post">
         <?= csrfField() ?>
         <div class="field">
-          <label for="user_id">Волонтёр</label>
-          <select id="user_id" name="user_id" required>
-            <option value="">— выберите —</option>
+          <label>Волонтёры</label>
+          <div class="hint" style="margin-bottom:8px;">Выберите одного или нескольких.</div>
+          <div class="check-list">
             <?php foreach ($volunteers as $v): ?>
-              <option value="<?= (int)$v['id'] ?>" <?= $preselect === (int)$v['id'] ? 'selected' : '' ?>>
-                <?= e($v['last_name'] . ' ' . $v['first_name']) ?> (<?= (int)$v['points'] ?>)
-              </option>
+              <label class="check-list-item">
+                <input type="checkbox" name="user_ids[]" value="<?= (int)$v['id'] ?>" <?= $preselect === (int)$v['id'] ? 'checked' : '' ?>>
+                <span><?= e($v['last_name'] . ' ' . $v['first_name']) ?> <small>(<?= (int)$v['points'] ?>)</small></span>
+              </label>
             <?php endforeach; ?>
-          </select>
+          </div>
         </div>
-        <div class="field-row">
-          <div class="field">
-            <label for="points">Очки</label>
-            <input type="number" id="points" name="points" value="0" min="-1000" max="1000" required>
-            <div class="hint">Отрицательное число — списание.</div>
-          </div>
-          <div class="field">
-            <label for="hours">Часы</label>
-            <input type="number" id="hours" name="hours" value="0" step="0.5" min="-24" max="24">
-          </div>
+        <div class="field">
+          <label for="points">Баллы</label>
+          <input type="number" id="points" name="points" value="0" min="-1000" max="1000" required>
+          <div class="hint">Отрицательное число — списание.</div>
         </div>
         <div class="field">
           <label for="reason">Причина</label>
           <input type="text" id="reason" name="reason" maxlength="190" required
                  placeholder="Например: координация субботника 12 сентября">
-          <div class="hint">Волонтёр увидит эту формулировку в своей истории.</div>
+          <div class="hint">Волонтёры увидят эту формулировку в своей истории.</div>
         </div>
         <button type="submit" class="btn btn-primary">Начислить</button>
       </form>
@@ -85,12 +85,11 @@ require __DIR__ . '/../includes/panel_header.php';
   </div>
 
   <div class="card">
-    <div class="card-head"><div><h2>Как начисляются очки</h2></div></div>
+    <div class="card-head"><div><h2>Как начисляются баллы</h2></div></div>
     <div class="card-body">
       <table class="kv">
         <tr><th>За участие в мероприятии</th><td style="font-family:inherit;">Значение указывается в карточке мероприятия. Начисляется при отметке «участие принято».</td></tr>
         <tr><th>За координацию</th><td style="font-family:inherit;">Вручную, рекомендуемое значение — <?= e(setting('points_coordinator', '50')) ?>.</td></tr>
-        <tr><th>За час работы</th><td style="font-family:inherit;">Ориентир — <?= e(setting('points_per_hour', '10')) ?> очков.</td></tr>
         <tr><th>Списание</th><td style="font-family:inherit;">Введите отрицательное число и укажите причину.</td></tr>
       </table>
       <p style="font-size:.85rem;color:var(--muted);margin-top:14px;">
@@ -105,7 +104,7 @@ require __DIR__ . '/../includes/panel_header.php';
   <?php if ($recent): ?>
     <div class="card-body card-body-flush table-wrap">
       <table class="data">
-        <thead><tr><th>Дата</th><th>Волонтёр</th><th>Очки</th><th>Причина</th><th>Кто начислил</th></tr></thead>
+        <thead><tr><th>Дата</th><th>Волонтёр</th><th>Баллы</th><th>Причина</th><th>Кто начислил</th></tr></thead>
         <tbody>
           <?php foreach ($recent as $t): ?>
             <tr>

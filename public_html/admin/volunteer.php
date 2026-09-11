@@ -37,7 +37,7 @@ require __DIR__ . '/../includes/panel_header.php';
       <h2><?= e($v['last_name'] . ' ' . $v['first_name'] . ' ' . $v['middle_name']) ?></h2>
       <p><?= e(positionLabel($v['position'])) ?> · в движении с <?= e(ruDate($v['created_at'])) ?></p>
     </div>
-    <a href="<?= url('admin/points.php?user_id=' . $userId) ?>" class="btn btn-outline btn-sm">Начислить очки</a>
+    <a href="<?= url('admin/points.php?user_id=' . $userId) ?>" class="btn btn-outline btn-sm">Начислить баллы</a>
   </div>
   <div class="card-body">
     <table class="kv">
@@ -47,7 +47,7 @@ require __DIR__ . '/../includes/panel_header.php';
       <tr><th>Школа / работа</th><td style="font-family:inherit;"><?= e($v['school'] ?: '—') ?></td></tr>
       <tr><th>ВКонтакте</th><td style="font-family:inherit;"><?= e($v['vk'] ?: '—') ?></td></tr>
       <tr><th>Telegram</th><td style="font-family:inherit;"><?= e($v['telegram'] ?: '—') ?></td></tr>
-      <tr><th>Очки / часы</th><td style="font-family:inherit;"><?= (int)$v['points'] ?> очков · <?= rtrim(rtrim(number_format((float)$v['hours'], 1, ',', ''), '0'), ',') ?> ч</td></tr>
+      <tr><th>Баллы</th><td style="font-family:inherit;"><?= (int)$v['points'] ?> <?= plural((int)$v['points'], 'балл', 'балла', 'баллов') ?></td></tr>
     </table>
   </div>
 </div>

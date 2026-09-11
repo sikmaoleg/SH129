@@ -15,8 +15,7 @@ $editable = [
     'org_vk'             => ['Ссылка на ВКонтакте', 'text'],
     'org_tg'             => ['Ссылка на Telegram', 'text'],
     'registration_open'  => ['Приём заявок открыт (1 — да, 0 — нет)', 'text'],
-    'points_per_hour'    => ['Очков за час работы (ориентир)', 'number'],
-    'points_coordinator' => ['Очков за координацию (ориентир)', 'number'],
+    'points_coordinator' => ['Баллов за координацию (ориентир)', 'number'],
     'level_thresholds'   => ['Пороги уровней через запятую', 'text'],
     'level_names'        => ['Названия уровней через запятую', 'text'],
     'stat_volunteers'    => ['Волонтёров на главной (0 — считать автоматически)', 'number'],
@@ -87,7 +86,7 @@ require __DIR__ . '/../includes/panel_header.php';
   <div class="card-head"><div><h2>Текущая шкала уровней</h2></div></div>
   <div class="card-body card-body-flush table-wrap">
     <table class="data">
-      <thead><tr><th>№</th><th>Название</th><th>Диапазон очков</th></tr></thead>
+      <thead><tr><th>№</th><th>Название</th><th>Диапазон баллов</th></tr></thead>
       <tbody>
         <?php foreach (levels() as $l): ?>
           <tr><td class="num"><?= $l['index'] ?></td><td><?= e($l['name']) ?></td>

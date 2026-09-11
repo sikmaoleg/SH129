@@ -9,7 +9,7 @@ $activeItem   = 'rating';
 $period = $_GET['period'] ?? 'all';
 
 if ($period === 'month') {
-    // Очки, начисленные за текущий месяц
+    // Баллы, начисленные за текущий месяц
     $rows = fetchAll(
         "SELECT u.id, u.last_name, u.first_name, u.avatar,
                 COALESCE(SUM(t.points),0) AS pts
@@ -24,7 +24,7 @@ if ($period === 'month') {
     );
 } else {
     $rows = fetchAll(
-        "SELECT id, last_name, first_name, avatar, points AS pts, hours
+        "SELECT id, last_name, first_name, avatar, points AS pts
          FROM users
          WHERE status='approved' AND role='volunteer'
          ORDER BY points DESC, last_name ASC
@@ -40,7 +40,7 @@ require __DIR__ . '/../includes/panel_header.php';
   <div class="card-head">
     <div>
       <h2>Таблица рейтинга</h2>
-      <p>Очки начисляются координаторами после подтверждения участия в мероприятии.</p>
+      <p>Баллы начисляются координаторами после подтверждения участия в мероприятии.</p>
     </div>
     <div style="display:flex;gap:8px;">
       <a href="<?= url('cabinet/rating.php') ?>" class="btn btn-sm <?= $period !== 'month' ? 'btn-primary' : 'btn-outline' ?>">За всё время</a>
@@ -56,7 +56,7 @@ require __DIR__ . '/../includes/panel_header.php';
             <th style="width:70px;">Место</th>
             <th>Волонтёр</th>
             <th>Уровень</th>
-            <th style="width:110px;">Очки</th>
+            <th style="width:110px;">Баллы</th>
           </tr>
         </thead>
         <tbody>
@@ -80,10 +80,10 @@ require __DIR__ . '/../includes/panel_header.php';
 </div>
 
 <div class="card">
-  <div class="card-head"><div><h2>Как устроены уровни</h2><p>Уровень зависит от накопленных очков за всё время.</p></div></div>
+  <div class="card-head"><div><h2>Как устроены уровни</h2><p>Уровень зависит от накопленных баллов за всё время.</p></div></div>
   <div class="card-body card-body-flush table-wrap">
     <table class="data">
-      <thead><tr><th>Уровень</th><th>Название</th><th>Очки</th></tr></thead>
+      <thead><tr><th>Уровень</th><th>Название</th><th>Баллы</th></tr></thead>
       <tbody>
         <?php foreach ($levelsList as $l): ?>
           <tr class="<?= levelFor((int)$me['points'])['current']['index'] === $l['index'] ? 'row-me' : '' ?>">

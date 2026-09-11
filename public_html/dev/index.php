@@ -56,7 +56,7 @@ $counts = [
     'Ждут одобрения'     => [(int)fetchValue("SELECT COUNT(*) FROM users WHERE status='pending'"), 'user-plus'],
     'Мероприятий'        => [(int)fetchValue('SELECT COUNT(*) FROM events'), 'calendar'],
     'Записей на события' => [(int)fetchValue('SELECT COUNT(*) FROM event_registrations'), 'clipboard'],
-    'Начислений очков'   => [(int)fetchValue('SELECT COUNT(*) FROM point_transactions'), 'medal'],
+    'Начислений баллов'  => [(int)fetchValue('SELECT COUNT(*) FROM point_transactions'), 'medal'],
     'Записей в журнале'  => [(int)fetchValue('SELECT COUNT(*) FROM audit_log'), 'target'],
 ];
 

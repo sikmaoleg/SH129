@@ -38,16 +38,18 @@ $history = fetchAll(
      WHERE user_id = ? ORDER BY created_at DESC LIMIT 6", [(int)$me['id']]
 );
 
+$badgesEarned = (int)fetchValue('SELECT COUNT(*) FROM user_badges WHERE user_id = ?', [(int)$me['id']]);
+
 require __DIR__ . '/../includes/panel_header.php';
 ?>
 
 <div class="grid-2" style="margin-bottom:22px;">
   <div class="level-box">
     <h2><?= icon('medal') ?>Уровень: <?= e($lvl['current']['name']) ?></h2>
-    <div class="pts"><?= (int)$me['points'] ?> <span style="font-size:1rem;font-weight:600;"><?= plural((int)$me['points'], 'очко', 'очка', 'очков') ?></span></div>
+    <div class="pts"><?= (int)$me['points'] ?> <span style="font-size:1rem;font-weight:600;"><?= plural((int)$me['points'], 'балл', 'балла', 'баллов') ?></span></div>
     <?php if ($lvl['next']): ?>
       <div class="progress"><i style="width:<?= $lvl['progress'] ?>%"></i></div>
-      <div class="sub">До уровня «<?= e($lvl['next']['name']) ?>» осталось <?= $lvl['to_next'] ?> <?= plural($lvl['to_next'], 'очко', 'очка', 'очков') ?></div>
+      <div class="sub">До уровня «<?= e($lvl['next']['name']) ?>» осталось <?= $lvl['to_next'] ?> <?= plural($lvl['to_next'], 'балл', 'балла', 'баллов') ?></div>
     <?php else: ?>
       <div class="progress"><i style="width:100%"></i></div>
       <div class="sub">Максимальный уровень достигнут</div>
@@ -57,7 +59,7 @@ require __DIR__ . '/../includes/panel_header.php';
   <div class="kpi-grid" style="grid-template-columns:1fr 1fr;margin-bottom:0;">
     <div class="kpi"><div class="kpi-top"><span>Место в рейтинге</span><?= icon('medal') ?></div><b><?= $myPlace ?><span style="font-size:.9rem;font-weight:600;color:var(--muted);"> из <?= $totalVolunteers ?></span></b><a href="<?= url('cabinet/rating.php') ?>"><?= icon('arrow-right') ?>Открыть рейтинг</a></div>
     <div class="kpi"><div class="kpi-top"><span>Мероприятий посещено</span><?= icon('calendar') ?></div><b><?= $attended ?></b><a href="<?= url('cabinet/events.php') ?>"><?= icon('arrow-right') ?>Мои мероприятия</a></div>
-    <div class="kpi"><div class="kpi-top"><span>Часов добровольчества</span><?= icon('clock') ?></div><b><?= rtrim(rtrim(number_format((float)$me['hours'], 1, ',', ' '), '0'), ',') ?></b></div>
+    <div class="kpi"><div class="kpi-top"><span>Бейджей получено</span><?= icon('flag') ?></div><b><?= $badgesEarned ?></b><a href="<?= url('cabinet/badges.php') ?>"><?= icon('arrow-right') ?>Мои достижения</a></div>
     <div class="kpi"><div class="kpi-top"><span>В движении с</span><?= icon('badge-check') ?></div><b style="font-size:1.15rem;"><?= e(ruDate($me['created_at'])) ?></b></div>
   </div>
 </div>
@@ -102,7 +104,7 @@ require __DIR__ . '/../includes/panel_header.php';
         </table>
       </div>
     <?php else: ?>
-      <div class="empty"><b>Начислений пока нет</b>Очки появятся после первого мероприятия.</div>
+      <div class="empty"><b>Начислений пока нет</b>Баллы появятся после первого мероприятия.</div>
     <?php endif; ?>
   </div>
 </div>

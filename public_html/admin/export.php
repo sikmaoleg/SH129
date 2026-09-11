@@ -29,7 +29,7 @@ if ($type === 'users') {
     }
     $users = fetchAll("SELECT * FROM users WHERE $where ORDER BY last_name ASC", $params);
 
-    $rows = [['Фамилия', 'Имя', 'Отчество', 'Почта', 'Телефон', 'Роль', 'Позиция', 'Статус', 'Очки', 'Часы', 'Дата рождения', 'В движении с']];
+    $rows = [['Фамилия', 'Имя', 'Отчество', 'Почта', 'Телефон', 'Роль', 'Позиция', 'Статус', 'Баллы', 'Дата рождения', 'В движении с']];
     foreach ($users as $u) {
         $rows[] = [
             $u['last_name'], $u['first_name'], $u['middle_name'] ?? '',
@@ -37,7 +37,7 @@ if ($type === 'users') {
             match ($u['role']) { 'dev' => 'разработчик', 'admin' => 'администратор', default => 'волонтёр' },
             positionLabel($u['position']),
             $u['status'] === 'blocked' ? 'заблокирован' : 'активен',
-            (int)$u['points'], (float)$u['hours'],
+            (int)$u['points'],
             $u['birth_date'] ?? '', $u['created_at'],
         ];
     }
@@ -58,12 +58,12 @@ if ($type === 'event') {
     );
     $statusLabel = ['registered' => 'записан', 'attended' => 'участие принято', 'no_show' => 'не пришёл', 'cancelled' => 'отменено'];
 
-    $rows = [['Фамилия', 'Имя', 'Телефон', 'Почта', 'Статус', 'Часы', 'Начислено очков']];
+    $rows = [['Фамилия', 'Имя', 'Телефон', 'Почта', 'Статус', 'Начислено баллов']];
     foreach ($regs as $r) {
         $rows[] = [
             $r['last_name'], $r['first_name'], $r['phone'] ?? '', $r['email'],
             $statusLabel[$r['status']] ?? $r['status'],
-            (float)$r['hours'], (int)$r['points_awarded'],
+            (int)$r['points_awarded'],
         ];
     }
     $slug = mb_substr(preg_replace('/[^a-zA-Zа-яА-Я0-9]+/u', '_', $event['title']), 0, 40);
@@ -94,19 +94,13 @@ if ($type === 'summary') {
         "SELECT COALESCE(SUM(points),0) FROM point_transactions WHERE points > 0 AND created_at BETWEEN ? AND ?",
         [$from, $toEnd]
     );
-    $hoursSum = (float)fetchValue(
-        "SELECT COALESCE(SUM(r.hours),0) FROM event_registrations r JOIN events e ON e.id = r.event_id
-         WHERE r.status='attended' AND e.starts_at BETWEEN ? AND ?",
-        [$from, $toEnd]
-    );
 
     $rows = [
         ['Сводка за период', $from . ' — ' . $to],
         [],
         ['Новых волонтёров', count($newUsers)],
         ['Мероприятий в периоде', count($eventsInRange)],
-        ['Начислено очков', (int)$pointsSum],
-        ['Отработано часов', $hoursSum],
+        ['Начислено баллов', (int)$pointsSum],
         [],
         ['Новые волонтёры'],
         ['Фамилия', 'Имя', 'Почта', 'Дата'],

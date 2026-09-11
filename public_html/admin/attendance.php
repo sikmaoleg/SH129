@@ -18,7 +18,7 @@ $panelTitle   = 'Участники мероприятия';
 $activeItem   = 'events';
 
 // ---------------------------------------------------------------------
-// Отметка участия и начисление очков
+// Отметка участия и начисление баллов
 // ---------------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrfCheck();
@@ -26,7 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'mark') {
         $marks   = $_POST['status']  ?? [];   // [registration_id => status]
-        $hoursIn = $_POST['hours']   ?? [];
         $changed = 0;
 
         db()->beginTransaction();
@@ -41,15 +40,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     continue;
                 }
 
-                $hours = round((float)($hoursIn[$regId] ?? 0), 1);
-                $hours = max(0, min(24, $hours));
-
-                // Очки начисляем один раз: при переходе в статус "участие принято"
+                // Баллы начисляем один раз: при переходе в статус "участие принято"
                 if ($newStatus === 'attended' && $reg['status'] !== 'attended') {
                     $pts = (int)$event['points_reward'];
-                    awardPoints((int)$reg['user_id'], $pts, 'Участие: ' . $event['title'], $eventId, $hours);
-                    q("UPDATE event_registrations SET status='attended', hours=?, points_awarded=? WHERE id=?",
-                      [$hours, $pts, $regId]);
+                    awardPoints((int)$reg['user_id'], $pts, 'Участие: ' . $event['title'], $eventId);
+                    q("UPDATE event_registrations SET status='attended', points_awarded=? WHERE id=?",
+                      [$pts, $regId]);
 
                     // Первое подтверждённое участие — бейдж «Первый шаг»
                     $attendedCount = (int)fetchValue(
@@ -61,15 +57,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     $changed++;
                 }
-                // Снятие отметки — очки списываем обратно
+                // Снятие отметки — баллы списываем обратно
                 elseif ($newStatus !== 'attended' && $reg['status'] === 'attended') {
                     awardPoints((int)$reg['user_id'], -(int)$reg['points_awarded'],
-                                'Отмена участия: ' . $event['title'], $eventId, -(float)$reg['hours']);
-                    q('UPDATE event_registrations SET status=?, hours=0, points_awarded=0 WHERE id=?',
+                                'Отмена участия: ' . $event['title'], $eventId);
+                    q('UPDATE event_registrations SET status=?, points_awarded=0 WHERE id=?',
                       [$newStatus, $regId]);
                     $changed++;
                 }
-                // Прочие смены статуса без пересчёта очков
+                // Прочие смены статуса без пересчёта баллов
                 elseif ($newStatus !== $reg['status']) {
                     q('UPDATE event_registrations SET status=? WHERE id=?', [$newStatus, $regId]);
                     $changed++;
@@ -84,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         logAction('attendance_mark', 'event', $eventId, 'изменено записей: ' . $changed);
         flash('success', $changed > 0
-            ? 'Отметки сохранены. Очки начислены участникам.'
+            ? 'Отметки сохранены. Баллы начислены участникам.'
             : 'Изменений не было.');
         redirect('admin/attendance.php?id=' . $eventId);
     }
@@ -113,7 +109,7 @@ require __DIR__ . '/../includes/panel_header.php';
     <div>
       <h2><?= e($event['title']) ?></h2>
       <p><?= e(ruDate($event['starts_at'], true)) ?><?= $event['location'] ? ' · ' . e($event['location']) : '' ?>
-         · за участие <?= (int)$event['points_reward'] ?> <?= plural((int)$event['points_reward'], 'очко', 'очка', 'очков') ?></p>
+         · за участие <?= (int)$event['points_reward'] ?> <?= plural((int)$event['points_reward'], 'балл', 'балла', 'баллов') ?></p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <a href="<?= url('admin/export.php?type=event&event_id='.$eventId) ?>" class="btn btn-outline btn-sm"><?= icon('download') ?>Экспорт CSV</a>
@@ -130,7 +126,7 @@ require __DIR__ . '/../includes/panel_header.php';
 
   <?php if (!$isPast): ?>
     <div class="card-body" style="padding-bottom:0;">
-      <div class="alert alert-info">Мероприятие ещё не состоялось. Отметить участие и начислить очки можно будет после его проведения.</div>
+      <div class="alert alert-info">Мероприятие ещё не состоялось. Отметить участие и начислить баллы можно будет после его проведения.</div>
     </div>
   <?php endif; ?>
 
@@ -151,7 +147,6 @@ require __DIR__ . '/../includes/panel_header.php';
               <th>Волонтёр</th>
               <th>Телефон</th>
               <th style="width:180px;">Отметка</th>
-              <th style="width:110px;">Часы</th>
               <th style="width:110px;">Начислено</th>
             </tr>
           </thead>
@@ -159,7 +154,7 @@ require __DIR__ . '/../includes/panel_header.php';
             <?php foreach ($regs as $r): ?>
               <tr>
                 <td><b><?= e($r['last_name'] . ' ' . $r['first_name']) ?></b>
-                    <div style="font-size:.79rem;color:var(--muted);">всего очков: <?= (int)$r['points'] ?></div></td>
+                    <div style="font-size:.79rem;color:var(--muted);">всего баллов: <?= (int)$r['points'] ?></div></td>
                 <td data-label="Телефон" style="color:var(--muted);font-size:.86rem;"><?= e($r['phone'] ?: '—') ?></td>
                 <td data-label="Отметка">
                   <select name="status[<?= (int)$r['id'] ?>]">
@@ -168,10 +163,6 @@ require __DIR__ . '/../includes/panel_header.php';
                     <option value="no_show"    <?= $r['status'] === 'no_show' ? 'selected' : '' ?>>не пришёл</option>
                     <option value="cancelled"  <?= $r['status'] === 'cancelled' ? 'selected' : '' ?>>отменено</option>
                   </select>
-                </td>
-                <td data-label="Часы">
-                  <input type="number" name="hours[<?= (int)$r['id'] ?>]" step="0.5" min="0" max="24"
-                         value="<?= rtrim(rtrim(number_format((float)$r['hours'], 1, '.', ''), '0'), '.') ?>">
                 </td>
                 <td class="num" data-label="Начислено" style="color:<?= (int)$r['points_awarded'] > 0 ? 'var(--ok)' : 'var(--muted)' ?>;">
                   <?= (int)$r['points_awarded'] > 0 ? '+' . (int)$r['points_awarded'] : '—' ?>
@@ -182,9 +173,9 @@ require __DIR__ . '/../includes/panel_header.php';
         </table>
       </div>
       <div class="card-body" style="border-top:1px solid var(--line);">
-        <button type="submit" class="btn btn-primary" <?= $isPast ? '' : 'disabled' ?>>Сохранить отметки и начислить очки</button>
+        <button type="submit" class="btn btn-primary" <?= $isPast ? '' : 'disabled' ?>>Сохранить отметки и начислить баллы</button>
         <p style="font-size:.83rem;color:var(--muted);margin-top:10px;">
-          Очки начисляются один раз при переводе в статус «участие принято». Если снять отметку — очки и часы вернутся обратно.
+          Баллы начисляются один раз при переводе в статус «участие принято». Если снять отметку — баллы вернутся обратно.
         </p>
       </div>
     </form>

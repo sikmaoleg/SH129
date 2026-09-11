@@ -44,7 +44,7 @@ require __DIR__ . '/../includes/panel_header.php';
 
 <div class="card">
   <div class="card-head">
-    <div><h2>Записей: <?= $total ?></h2><p>Фиксируются входы, одобрения заявок, начисления очков и правки данных.</p></div>
+    <div><h2>Записей: <?= $total ?></h2><p>Фиксируются входы, одобрения заявок, начисления баллов и правки данных.</p></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       <form method="get" class="inline-form">
         <select name="action_filter" onchange="this.form.submit()">
