@@ -41,6 +41,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         q('DELETE FROM user_badges WHERE user_id = ? AND badge_id = ?', [$userId, $badgeId]);
         logAction('badge_revoke', 'user', $userId, (string)$badgeId);
         flash('info', 'Достижение снято.');
+    } elseif ($action === 'avatar_upload') {
+        $result = handleAvatarUpload($_FILES['avatar'] ?? []);
+        if (isset($result['error'])) {
+            flash('error', $result['error']);
+        } else {
+            deleteAvatarFile($v['avatar']);
+            q('UPDATE users SET avatar = ? WHERE id = ?', [$result['filename'], $userId]);
+            logAction('avatar_update', 'user', $userId);
+            flash('success', 'Фото профиля обновлено.');
+        }
+    } elseif ($action === 'avatar_remove') {
+        if ($v['avatar']) {
+            deleteAvatarFile($v['avatar']);
+            q('UPDATE users SET avatar = NULL WHERE id = ?', [$userId]);
+            logAction('avatar_remove', 'user', $userId);
+            flash('info', 'Фото профиля удалено.');
+        }
     } else {
         $notes = trim((string)($_POST['coordinator_notes'] ?? ''));
         q('UPDATE users SET coordinator_notes = ? WHERE id = ?', [$notes !== '' ? $notes : null, $userId]);
@@ -86,6 +103,35 @@ require __DIR__ . '/../includes/panel_header.php';
       <tr><th>Баллы</th><td style="font-family:inherit;"><?= (int)$v['points'] ?> <?= plural((int)$v['points'], 'балл', 'балла', 'баллов') ?></td></tr>
       <tr><th>Вступил(а) в МГЕР</th><td style="font-family:inherit;"><?= e(ruDate($v['mger_joined_at'] ?? null)) ?></td></tr>
     </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><div><h2>Фото профиля</h2><p>Загрузить или заменить фото может администратор или разработчик.</p></div></div>
+  <div class="card-body" style="display:flex;gap:22px;align-items:center;flex-wrap:wrap;">
+    <div class="vk-avatar" style="margin:0;flex:none;">
+      <?php if ($v['avatar']): ?>
+        <img src="<?= url('uploads/avatars/' . $v['avatar']) ?>" alt="">
+      <?php else: ?>
+        <span><?= e(mb_substr($v['first_name'], 0, 1) . mb_substr($v['last_name'], 0, 1)) ?></span>
+      <?php endif; ?>
+    </div>
+    <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:10px;">
+      <form method="post" enctype="multipart/form-data" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <?= csrfField() ?>
+        <input type="hidden" name="action" value="avatar_upload">
+        <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp" required>
+        <button type="submit" class="btn btn-primary btn-sm">Загрузить</button>
+      </form>
+      <?php if ($v['avatar']): ?>
+        <form method="post" style="margin:0;">
+          <?= csrfField() ?>
+          <input type="hidden" name="action" value="avatar_remove">
+          <button type="submit" class="btn btn-outline btn-sm" data-confirm="Удалить фото профиля волонтёра?">Удалить фото</button>
+        </form>
+      <?php endif; ?>
+      <div class="hint">JPG, PNG или WEBP, до 5 МБ. Фото обрежется по центру до квадрата.</div>
+    </div>
   </div>
 </div>
 

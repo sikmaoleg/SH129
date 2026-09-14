@@ -36,59 +36,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'avatar_upload') {
-        $file = $_FILES['avatar'] ?? null;
-        if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
-            $errors[] = 'Выберите файл с фотографией.';
-        } elseif ($file['error'] !== UPLOAD_ERR_OK) {
-            $errors[] = match ($file['error']) {
-                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Файл слишком большой.',
-                default => 'Не удалось загрузить файл. Попробуйте ещё раз.',
-            };
-        } elseif ($file['size'] > 5 * 1024 * 1024) {
-            $errors[] = 'Файл слишком большой — до 5 МБ.';
+        $result = handleAvatarUpload($_FILES['avatar'] ?? []);
+        if (isset($result['error'])) {
+            $errors[] = $result['error'];
         } else {
-            $info = @getimagesize($file['tmp_name']);
-            $loaders = [IMAGETYPE_JPEG => 'imagecreatefromjpeg', IMAGETYPE_PNG => 'imagecreatefrompng', IMAGETYPE_WEBP => 'imagecreatefromwebp'];
-            $src = ($info && isset($loaders[$info[2]])) ? $loaders[$info[2]]($file['tmp_name']) : false;
-            if (!$src) {
-                $errors[] = 'Поддерживаются только изображения JPG, PNG или WEBP.';
-            } else {
-                $w = imagesx($src);
-                $h = imagesy($src);
-                $side = min($w, $h);
-                $target = min(480, $side);
-                $dst = imagecreatetruecolor($target, $target);
-                imagecopyresampled($dst, $src, 0, 0, (int)(($w - $side) / 2), (int)(($h - $side) / 2), $target, $target, $side, $side);
-                imagedestroy($src);
-
-                $useWebp  = function_exists('imagewebp');
-                $filename = bin2hex(random_bytes(16)) . ($useWebp ? '.webp' : '.jpg');
-                $dir      = __DIR__ . '/../uploads/avatars/';
-                $saved    = $useWebp ? imagewebp($dst, $dir . $filename, 82) : imagejpeg($dst, $dir . $filename, 85);
-                imagedestroy($dst);
-
-                if (!$saved) {
-                    $errors[] = 'Не удалось сохранить фото. Попробуйте ещё раз.';
-                } else {
-                    $old = $me['avatar'];
-                    q('UPDATE users SET avatar = ? WHERE id = ?', [$filename, (int)$me['id']]);
-                    if ($old && is_file($dir . $old)) {
-                        @unlink($dir . $old);
-                    }
-                    logAction('avatar_update', 'user', (int)$me['id']);
-                    flash('success', 'Фото профиля обновлено.');
-                    redirect('cabinet/profile.php');
-                }
-            }
+            $old = $me['avatar'];
+            q('UPDATE users SET avatar = ? WHERE id = ?', [$result['filename'], (int)$me['id']]);
+            deleteAvatarFile($old);
+            logAction('avatar_update', 'user', (int)$me['id']);
+            flash('success', 'Фото профиля обновлено.');
+            redirect('cabinet/profile.php');
         }
     }
 
     if ($action === 'avatar_remove') {
         if ($me['avatar']) {
-            $dir = __DIR__ . '/../uploads/avatars/';
-            if (is_file($dir . $me['avatar'])) {
-                @unlink($dir . $me['avatar']);
-            }
+            deleteAvatarFile($me['avatar']);
             q('UPDATE users SET avatar = NULL WHERE id = ?', [(int)$me['id']]);
             logAction('avatar_remove', 'user', (int)$me['id']);
             flash('info', 'Фото профиля удалено.');

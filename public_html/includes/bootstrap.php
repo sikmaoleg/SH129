@@ -208,6 +208,67 @@ function takeFlash(): array
 }
 
 // ---------------------------------------------------------------------
+// Загрузка фото профиля
+// ---------------------------------------------------------------------
+/**
+ * Валидирует загруженный файл (реальный формат — через getimagesize, а не
+ * MIME от клиента), обрезает по центру до квадрата, уменьшает до 480px и
+ * сохраняет в uploads/avatars/. Возвращает ['filename' => string] или
+ * ['error' => string] — саму запись в users и удаление старого файла
+ * делает вызывающий код, он знает старое значение и id пользователя.
+ */
+function handleAvatarUpload(array $file): array
+{
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return ['error' => 'Выберите файл с фотографией.'];
+    }
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        return ['error' => match ($file['error']) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Файл слишком большой.',
+            default => 'Не удалось загрузить файл. Попробуйте ещё раз.',
+        }];
+    }
+    if ($file['size'] > 5 * 1024 * 1024) {
+        return ['error' => 'Файл слишком большой — до 5 МБ.'];
+    }
+
+    $info = @getimagesize($file['tmp_name']);
+    $loaders = [IMAGETYPE_JPEG => 'imagecreatefromjpeg', IMAGETYPE_PNG => 'imagecreatefrompng', IMAGETYPE_WEBP => 'imagecreatefromwebp'];
+    $src = ($info && isset($loaders[$info[2]])) ? $loaders[$info[2]]($file['tmp_name']) : false;
+    if (!$src) {
+        return ['error' => 'Поддерживаются только изображения JPG, PNG или WEBP.'];
+    }
+
+    $w = imagesx($src);
+    $h = imagesy($src);
+    $side   = min($w, $h);
+    $target = min(480, $side);
+    $dst = imagecreatetruecolor($target, $target);
+    imagecopyresampled($dst, $src, 0, 0, (int)(($w - $side) / 2), (int)(($h - $side) / 2), $target, $target, $side, $side);
+    imagedestroy($src);
+
+    $useWebp  = function_exists('imagewebp');
+    $filename = bin2hex(random_bytes(16)) . ($useWebp ? '.webp' : '.jpg');
+    $dir      = __DIR__ . '/../uploads/avatars/';
+    $saved    = $useWebp ? imagewebp($dst, $dir . $filename, 82) : imagejpeg($dst, $dir . $filename, 85);
+    imagedestroy($dst);
+
+    return $saved ? ['filename' => $filename] : ['error' => 'Не удалось сохранить фото. Попробуйте ещё раз.'];
+}
+
+/** Удаляет файл аватара с диска, если он существует. */
+function deleteAvatarFile(?string $filename): void
+{
+    if (!$filename) {
+        return;
+    }
+    $path = __DIR__ . '/../uploads/avatars/' . $filename;
+    if (is_file($path)) {
+        @unlink($path);
+    }
+}
+
+// ---------------------------------------------------------------------
 // Форматирование
 // ---------------------------------------------------------------------
 const RU_MONTHS = [1=>'января',2=>'февраля',3=>'марта',4=>'апреля',5=>'мая',6=>'июня',
