@@ -35,6 +35,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'avatar_upload') {
+        $file = $_FILES['avatar'] ?? null;
+        if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            $errors[] = 'Выберите файл с фотографией.';
+        } elseif ($file['error'] !== UPLOAD_ERR_OK) {
+            $errors[] = match ($file['error']) {
+                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Файл слишком большой.',
+                default => 'Не удалось загрузить файл. Попробуйте ещё раз.',
+            };
+        } elseif ($file['size'] > 5 * 1024 * 1024) {
+            $errors[] = 'Файл слишком большой — до 5 МБ.';
+        } else {
+            $info = @getimagesize($file['tmp_name']);
+            $loaders = [IMAGETYPE_JPEG => 'imagecreatefromjpeg', IMAGETYPE_PNG => 'imagecreatefrompng', IMAGETYPE_WEBP => 'imagecreatefromwebp'];
+            $src = ($info && isset($loaders[$info[2]])) ? $loaders[$info[2]]($file['tmp_name']) : false;
+            if (!$src) {
+                $errors[] = 'Поддерживаются только изображения JPG, PNG или WEBP.';
+            } else {
+                $w = imagesx($src);
+                $h = imagesy($src);
+                $side = min($w, $h);
+                $target = min(480, $side);
+                $dst = imagecreatetruecolor($target, $target);
+                imagecopyresampled($dst, $src, 0, 0, (int)(($w - $side) / 2), (int)(($h - $side) / 2), $target, $target, $side, $side);
+                imagedestroy($src);
+
+                $useWebp  = function_exists('imagewebp');
+                $filename = bin2hex(random_bytes(16)) . ($useWebp ? '.webp' : '.jpg');
+                $dir      = __DIR__ . '/../uploads/avatars/';
+                $saved    = $useWebp ? imagewebp($dst, $dir . $filename, 82) : imagejpeg($dst, $dir . $filename, 85);
+                imagedestroy($dst);
+
+                if (!$saved) {
+                    $errors[] = 'Не удалось сохранить фото. Попробуйте ещё раз.';
+                } else {
+                    $old = $me['avatar'];
+                    q('UPDATE users SET avatar = ? WHERE id = ?', [$filename, (int)$me['id']]);
+                    if ($old && is_file($dir . $old)) {
+                        @unlink($dir . $old);
+                    }
+                    logAction('avatar_update', 'user', (int)$me['id']);
+                    flash('success', 'Фото профиля обновлено.');
+                    redirect('cabinet/profile.php');
+                }
+            }
+        }
+    }
+
+    if ($action === 'avatar_remove') {
+        if ($me['avatar']) {
+            $dir = __DIR__ . '/../uploads/avatars/';
+            if (is_file($dir . $me['avatar'])) {
+                @unlink($dir . $me['avatar']);
+            }
+            q('UPDATE users SET avatar = NULL WHERE id = ?', [(int)$me['id']]);
+            logAction('avatar_remove', 'user', (int)$me['id']);
+            flash('info', 'Фото профиля удалено.');
+        }
+        redirect('cabinet/profile.php');
+    }
+
     if ($action === 'password') {
         $cur  = (string)($_POST['current_password'] ?? '');
         $new  = (string)($_POST['new_password'] ?? '');
@@ -63,6 +124,35 @@ require __DIR__ . '/../includes/panel_header.php';
 <?php if ($errors): ?>
   <div class="alert alert-error"><ul><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul></div>
 <?php endif; ?>
+
+<div class="card">
+  <div class="card-head"><div><h2>Фото профиля</h2><p>Показывается в личном кабинете, на доске почёта и в команде отделения.</p></div></div>
+  <div class="card-body" style="display:flex;gap:22px;align-items:center;flex-wrap:wrap;">
+    <div class="vk-avatar" style="margin:0;flex:none;">
+      <?php if ($me['avatar']): ?>
+        <img src="<?= url('uploads/avatars/' . $me['avatar']) ?>" alt="">
+      <?php else: ?>
+        <span><?= e(mb_substr($me['first_name'], 0, 1) . mb_substr($me['last_name'], 0, 1)) ?></span>
+      <?php endif; ?>
+    </div>
+    <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:10px;">
+      <form method="post" enctype="multipart/form-data" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <?= csrfField() ?>
+        <input type="hidden" name="action" value="avatar_upload">
+        <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp" required>
+        <button type="submit" class="btn btn-primary btn-sm">Загрузить</button>
+      </form>
+      <?php if ($me['avatar']): ?>
+        <form method="post" style="margin:0;">
+          <?= csrfField() ?>
+          <input type="hidden" name="action" value="avatar_remove">
+          <button type="submit" class="btn btn-outline btn-sm" data-confirm="Удалить фото профиля?">Удалить фото</button>
+        </form>
+      <?php endif; ?>
+      <div class="hint">JPG, PNG или WEBP, до 5 МБ. Фото обрежется по центру до квадрата.</div>
+    </div>
+  </div>
+</div>
 
 <div class="grid-2">
   <div class="card">
