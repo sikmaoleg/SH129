@@ -60,7 +60,7 @@ require __DIR__ . '/../includes/panel_header.php';
     <div class="kpi"><div class="kpi-top"><span>Место в рейтинге</span><?= icon('medal') ?></div><b><?= $myPlace ?><span style="font-size:.9rem;font-weight:600;color:var(--muted);"> из <?= $totalVolunteers ?></span></b><a href="<?= url('cabinet/rating.php') ?>"><?= icon('arrow-right') ?>Открыть рейтинг</a></div>
     <div class="kpi"><div class="kpi-top"><span>Мероприятий посещено</span><?= icon('calendar') ?></div><b><?= $attended ?></b><a href="<?= url('cabinet/events.php') ?>"><?= icon('arrow-right') ?>Мои мероприятия</a></div>
     <div class="kpi"><div class="kpi-top"><span>Бейджей получено</span><?= icon('flag') ?></div><b><?= $badgesEarned ?></b><a href="<?= url('cabinet/badges.php') ?>"><?= icon('arrow-right') ?>Мои достижения</a></div>
-    <div class="kpi"><div class="kpi-top"><span>В движении с</span><?= icon('badge-check') ?></div><b style="font-size:1.15rem;"><?= e(ruDate($me['created_at'])) ?></b></div>
+    <div class="kpi"><div class="kpi-top"><span>В организации с</span><?= icon('badge-check') ?></div><b style="font-size:1.15rem;"><?= e(ruDate($me['created_at'])) ?></b></div>
   </div>
 </div>
 

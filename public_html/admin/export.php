@@ -29,7 +29,7 @@ if ($type === 'users') {
     }
     $users = fetchAll("SELECT * FROM users WHERE $where ORDER BY last_name ASC", $params);
 
-    $rows = [['Фамилия', 'Имя', 'Отчество', 'Почта', 'Телефон', 'Роль', 'Позиция', 'Статус', 'Баллы', 'Дата рождения', 'В движении с']];
+    $rows = [['Фамилия', 'Имя', 'Отчество', 'Почта', 'Телефон', 'Роль', 'Позиция', 'Статус', 'Баллы', 'Дата рождения', 'В организации с']];
     foreach ($users as $u) {
         $rows[] = [
             $u['last_name'], $u['first_name'], $u['middle_name'] ?? '',

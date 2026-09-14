@@ -97,7 +97,7 @@ require __DIR__ . '/../includes/panel_header.php';
             <tr>
               <td>
                 <b><a href="<?= url('admin/volunteer.php?id=' . (int)$u['id']) ?>"><?= e($u['last_name'] . ' ' . $u['first_name']) ?></a></b>
-                <div style="font-size:.79rem;color:var(--muted);">в движении с <?= e(ruDate($u['created_at'])) ?></div>
+                <div style="font-size:.79rem;color:var(--muted);">в организации с <?= e(ruDate($u['created_at'])) ?></div>
               </td>
               <td data-label="Контакты" style="font-size:.85rem;color:var(--muted);"><?= e($u['email']) ?><br><?= e($u['phone'] ?: '—') ?></td>
               <td data-label="Роль">

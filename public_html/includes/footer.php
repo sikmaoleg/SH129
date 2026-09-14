@@ -8,7 +8,7 @@
       </div>
       <div class="footer-cols">
         <div class="footer-col">
-          <h4>О движении</h4>
+          <h4>Об организации</h4>
           <a href="<?= url('about.php') ?>">О нас</a>
           <a href="<?= url('team.php') ?>">Команда</a>
           <a href="<?= url('news.php') ?>">Новости</a>

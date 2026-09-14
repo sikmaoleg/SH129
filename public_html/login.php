@@ -63,7 +63,7 @@ require __DIR__ . '/includes/header.php';
         <button type="submit" class="btn btn-primary btn-block">Войти</button>
       </form>
 
-      <p class="form-foot">Ещё не в движении? <a href="<?= url('register.php') ?>">Подать заявку</a></p>
+      <p class="form-foot">Ещё не в организации? <a href="<?= url('register.php') ?>">Подать заявку</a></p>
     </div>
   </div>
 </section>

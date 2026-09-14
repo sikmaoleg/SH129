@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($closed)) {
         } else {
             $age = (int)((new DateTime($old['birth_date']))->diff(new DateTime())->y);
             if ($age < 14) {
-                $errors[] = 'Вступить в движение можно с 14 лет.';
+                $errors[] = 'Вступить в организацию можно с 14 лет.';
             }
             if ($age > 100) {
                 $errors[] = 'Проверьте дату рождения.';
@@ -100,7 +100,7 @@ require __DIR__ . '/includes/header.php';
 <div class="page-head">
   <div class="container">
     <div class="breadcrumbs"><a href="<?= url('index.php') ?>">Главная</a> / Стать волонтёром</div>
-    <h1>Заявка на вступление в движение</h1>
+    <h1>Заявка на вступление в организацию</h1>
   </div>
 </div>
 
@@ -162,7 +162,7 @@ require __DIR__ . '/includes/header.php';
             <div class="field">
               <label for="birth_date">Дата рождения <span class="req">*</span></label>
               <input type="date" id="birth_date" name="birth_date" value="<?= e($old['birth_date']) ?>" required>
-              <div class="hint">Вступить в движение можно с 14 лет.</div>
+              <div class="hint">Вступить в организацию можно с 14 лет.</div>
             </div>
           </div>
 
@@ -218,7 +218,7 @@ require __DIR__ . '/includes/header.php';
           <button type="submit" class="btn btn-accent btn-block">Отправить заявку</button>
         </form>
 
-        <p class="form-foot">Уже состоите в движении? <a href="<?= url('login.php') ?>">Войти в личный кабинет</a></p>
+        <p class="form-foot">Уже состоите в организации? <a href="<?= url('login.php') ?>">Войти в личный кабинет</a></p>
       </div>
 
     <?php endif; ?>
