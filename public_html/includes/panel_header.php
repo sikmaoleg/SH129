@@ -37,6 +37,7 @@ $menus = [
             'news'         => ['Новости',               'admin/news.php',         'clipboard'],
             'points'       => ['Начисление баллов',     'admin/points.php',       'medal'],
             'rating'       => ['Рейтинг',               'admin/rating.php',       'target'],
+            'badges'       => ['Достижения',            'admin/badges.php',       'academic-cap'],
             'honor'        => ['Доска почёта',          'admin/honor.php',        'badge-check'],
             'analytics'    => ['Аналитика',             'admin/analytics.php',    'chart-bar'],
         ],

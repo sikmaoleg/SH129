@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$target) {
         flash('error', 'Пользователь не найден.');
-    } elseif ($userId === (int)$me['id']) {
+    } elseif ($userId === (int)$me['id'] && $action !== 'role') {
         flash('error', 'Нельзя менять собственную учётную запись здесь.');
     } elseif ($target['role'] === 'dev' && !isDev()) {
         flash('error', 'Учётную запись разработчика может менять только разработчик.');
@@ -106,11 +106,12 @@ require __DIR__ . '/../includes/panel_header.php';
                   <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
                   <input type="hidden" name="action" value="role">
                   <input type="hidden" name="q" value="<?= e($search) ?>">
-                  <select name="role" onchange="this.form.submit()" <?= (int)$u['id'] === (int)$me['id'] ? 'disabled' : '' ?>>
+                  <select name="role" onchange="this.form.submit()">
                     <option value="volunteer" <?= $u['role'] === 'volunteer' ? 'selected' : '' ?>>волонтёр</option>
                     <option value="admin"     <?= $u['role'] === 'admin' ? 'selected' : '' ?>>администратор</option>
                     <?php if (isDev()): ?><option value="dev" <?= $u['role'] === 'dev' ? 'selected' : '' ?>>разработчик</option><?php endif; ?>
                   </select>
+                  <?php if ((int)$u['id'] === (int)$me['id']): ?><div class="hint">Это вы — смена роли применится сразу.</div><?php endif; ?>
                 </form>
               </td>
               <td data-label="Позиция">

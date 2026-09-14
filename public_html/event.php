@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/bootstrap.php';
+requireLogin();
 $id = (int)($_GET['id'] ?? 0);
 $ev = fetchOne(
     "SELECT e.*, d.title AS direction_title,
@@ -18,10 +19,7 @@ if (!$ev) {
 }
 
 $me         = currentUser();
-$myReg      = null;
-if ($me) {
-    $myReg = fetchOne('SELECT * FROM event_registrations WHERE event_id = ? AND user_id = ?', [$id, (int)$me['id']]);
-}
+$myReg      = fetchOne('SELECT * FROM event_registrations WHERE event_id = ? AND user_id = ?', [$id, (int)$me['id']]);
 $isPast     = strtotime($ev['starts_at']) < time();
 $freeSlots  = (int)$ev['capacity'] > 0 ? max(0, (int)$ev['capacity'] - (int)$ev['taken']) : null;
 
@@ -89,8 +87,6 @@ require __DIR__ . '/includes/header.php';
       <div style="margin-top:32px;">
         <?php if ($isPast): ?>
           <div class="alert alert-info">Мероприятие уже прошло.</div>
-        <?php elseif (!$me): ?>
-          <div class="alert alert-info">Записаться на мероприятие могут волонтёры отделения. <a href="<?= url('login.php') ?>">Войдите</a> или <a href="<?= url('register.php') ?>">подайте заявку</a>.</div>
         <?php elseif ($myReg && $myReg['status'] === 'registered'): ?>
           <div class="alert alert-success">Вы записаны на это мероприятие.</div>
           <form method="post">

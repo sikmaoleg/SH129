@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/bootstrap.php';
+requireLogin();
 
 $id = (int)($_GET['id'] ?? 0);
 $ev = fetchOne("SELECT * FROM events WHERE id = ? AND status IN ('published','finished')", [$id]);

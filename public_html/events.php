@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/bootstrap.php';
+requireLogin();
 $pageTitle = 'Мероприятия — Молодая Гвардия Щёлково';
 $activeNav = 'events';
 

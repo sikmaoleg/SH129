@@ -9,10 +9,12 @@ $navItems  = [
     'about'       => ['О нас',        'about.php'],
     'team'        => ['Команда',      'team.php'],
     'news'        => ['Новости',      'news.php'],
-    'events'      => ['Мероприятия',  'events.php'],
-    'gallery'     => ['Фотогалерея',  'gallery.php'],
-    'contacts'    => ['Контакты',     'contacts.php'],
 ];
+if ($me) {
+    $navItems['events'] = ['Мероприятия', 'events.php'];
+}
+$navItems['gallery']  = ['Фотогалерея', 'gallery.php'];
+$navItems['contacts'] = ['Контакты',    'contacts.php'];
 $metaDescription = 'Местное отделение «Молодой Гвардии Единой России» в Щёлковском городском округе: волонтёрские проекты, мероприятия, новости и приём в движение.';
 ?><!DOCTYPE html>
 <html lang="ru">
