@@ -228,8 +228,8 @@ function handleAvatarUpload(array $file): array
             default => 'Не удалось загрузить файл. Попробуйте ещё раз.',
         }];
     }
-    if ($file['size'] > 5 * 1024 * 1024) {
-        return ['error' => 'Файл слишком большой — до 5 МБ.'];
+    if ($file['size'] > 50 * 1024 * 1024) {
+        return ['error' => 'Файл слишком большой — до 50 МБ.'];
     }
 
     $info = @getimagesize($file['tmp_name']);
@@ -237,6 +237,12 @@ function handleAvatarUpload(array $file): array
     $src = ($info && isset($loaders[$info[2]])) ? $loaders[$info[2]]($file['tmp_name']) : false;
     if (!$src) {
         return ['error' => 'Поддерживаются только изображения JPG, PNG или WEBP.'];
+    }
+    // Защита от нехватки памяти на очень крупных снимках (50 МБ файл может оказаться
+    // фото в десятки мегапикселей — imagecreatefrom* держит его целиком в памяти).
+    if ($info[0] * $info[1] > 50_000_000) {
+        imagedestroy($src);
+        return ['error' => 'Слишком высокое разрешение фото. Уменьшите изображение и попробуйте снова.'];
     }
 
     $w = imagesx($src);

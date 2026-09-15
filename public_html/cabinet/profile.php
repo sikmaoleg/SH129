@@ -112,7 +112,7 @@ require __DIR__ . '/../includes/panel_header.php';
           <button type="submit" class="btn btn-outline btn-sm" data-confirm="Удалить фото профиля?">Удалить фото</button>
         </form>
       <?php endif; ?>
-      <div class="hint">JPG, PNG или WEBP, до 5 МБ. Фото обрежется по центру до квадрата.</div>
+      <div class="hint">JPG, PNG или WEBP, до 50 МБ. Фото обрежется по центру до квадрата.</div>
     </div>
   </div>
 </div>
