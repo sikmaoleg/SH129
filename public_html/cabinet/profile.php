@@ -119,7 +119,7 @@ require __DIR__ . '/../includes/panel_header.php';
 
 <div class="grid-2">
   <div class="card">
-    <div class="card-head"><div><h2>Личные данные</h2><p>Эти сведения видит координатор отделения.</p></div></div>
+    <div class="card-head"><div><h2>Личные данные</h2><p>Эти сведения видит администратор отделения.</p></div></div>
     <div class="card-body">
       <form method="post">
         <?= csrfField() ?>
@@ -129,7 +129,7 @@ require __DIR__ . '/../includes/panel_header.php';
           <div class="field"><label for="first_name">Имя</label><input type="text" id="first_name" name="first_name" value="<?= e($me['first_name']) ?>" required></div>
         </div>
         <div class="field"><label for="middle_name">Отчество</label><input type="text" id="middle_name" name="middle_name" value="<?= e($me['middle_name']) ?>"></div>
-        <div class="field"><label>Электронная почта</label><input type="email" value="<?= e($me['email']) ?>" disabled><div class="hint">Адрес меняет администратор — напишите координатору.</div></div>
+        <div class="field"><label>Электронная почта</label><input type="email" value="<?= e($me['email']) ?>" disabled><div class="hint">Адрес меняет администратор — напишите ему.</div></div>
         <div class="field"><label for="phone">Телефон</label><input type="tel" id="phone" name="phone" value="<?= e($me['phone']) ?>"></div>
         <div class="field-row">
           <div class="field"><label for="vk">ВКонтакте</label><input type="text" id="vk" name="vk" value="<?= e($me['vk']) ?>"></div>

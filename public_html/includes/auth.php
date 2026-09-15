@@ -76,7 +76,7 @@ function attemptLogin(string $email, string $password): array
             $reason = $user['reject_reason'] ? ' Причина: ' . $user['reject_reason'] : '';
             return ['ok' => false, 'error' => 'Заявка отклонена.' . $reason];
         case 'blocked':
-            return ['ok' => false, 'error' => 'Доступ к учётной записи закрыт. Свяжитесь с координатором.'];
+            return ['ok' => false, 'error' => 'Доступ к учётной записи закрыт. Свяжитесь с администратором.'];
     }
 
     // Новый идентификатор сессии — защита от фиксации сессии

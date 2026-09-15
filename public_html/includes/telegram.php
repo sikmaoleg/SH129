@@ -7,7 +7,7 @@ declare(strict_types=1);
  * Бот должен быть добавлен администратором канала. Раз в запуск (по cron
  * или вручную из панели разработчика) мы опрашиваем Bot API методом
  * getUpdates и забираем новые сообщения канала (channel_post), превращая
- * каждое в черновик в таблице news — координатор проверяет и публикует.
+ * каждое в черновик в таблице news — администратор проверяет и публикует.
  */
 
 /** Низкоуровневый вызов Bot API. Бросает исключение с текстом ошибки Telegram. */
@@ -69,35 +69,9 @@ function tgSaveNewsCover(string $token, string $fileId): ?string
     }
     $tmp = tempnam(sys_get_temp_dir(), 'tgphoto');
     file_put_contents($tmp, $bytes);
-    $info = @getimagesize($tmp);
-    $loaders = [IMAGETYPE_JPEG => 'imagecreatefromjpeg', IMAGETYPE_PNG => 'imagecreatefrompng', IMAGETYPE_WEBP => 'imagecreatefromwebp'];
-    $src = ($info && isset($loaders[$info[2]])) ? $loaders[$info[2]]($tmp) : false;
+    $filename = resizeAndSaveImage($tmp, 'news', 1600);
     @unlink($tmp);
-    if (!$src) {
-        return null;
-    }
-
-    // Слишком крупные фото уменьшаем, чтобы не раздувать хранилище — пропорции не трогаем.
-    $w = imagesx($src);
-    $h = imagesy($src);
-    $maxSide = max($w, $h);
-    if ($maxSide > 1600) {
-        $scale = 1600 / $maxSide;
-        $nw = (int)round($w * $scale);
-        $nh = (int)round($h * $scale);
-        $dst = imagecreatetruecolor($nw, $nh);
-        imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
-        imagedestroy($src);
-        $src = $dst;
-    }
-
-    $useWebp  = function_exists('imagewebp');
-    $filename = bin2hex(random_bytes(16)) . ($useWebp ? '.webp' : '.jpg');
-    $dir      = __DIR__ . '/../uploads/news/';
-    $saved    = $useWebp ? imagewebp($src, $dir . $filename, 85) : imagejpeg($src, $dir . $filename, 88);
-    imagedestroy($src);
-
-    return $saved ? $filename : null;
+    return $filename;
 }
 
 /**

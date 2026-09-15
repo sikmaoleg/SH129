@@ -18,7 +18,7 @@ require __DIR__ . '/../includes/panel_header.php';
   <div class="card-head">
     <div>
       <h2>Мои бейджи</h2>
-      <p>Получено <?= count($mine) ?> из <?= count($all) ?>. Бейджи выдаёт координатор за конкретные достижения.</p>
+      <p>Получено <?= count($mine) ?> из <?= count($all) ?>. Бейджи выдаёт администратор за конкретные достижения.</p>
     </div>
   </div>
   <div class="card-body">

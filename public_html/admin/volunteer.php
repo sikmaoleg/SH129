@@ -88,7 +88,7 @@ require __DIR__ . '/../includes/panel_header.php';
   <div class="card-head">
     <div>
       <h2><?= e($v['last_name'] . ' ' . $v['first_name'] . ' ' . $v['middle_name']) ?></h2>
-      <p><?= e(positionLabel($v['position'])) ?> · в организации с <?= e(ruDate($v['created_at'])) ?></p>
+      <p><?= e(positionLabel($v['position'])) ?> · в организации с <?= e(ruDate(membershipDate($v))) ?></p>
     </div>
     <a href="<?= url('admin/points.php?user_id=' . $userId) ?>" class="btn btn-outline btn-sm">Начислить баллы</a>
   </div>
@@ -153,7 +153,7 @@ require __DIR__ . '/../includes/panel_header.php';
   </div>
 
   <div class="card">
-    <div class="card-head"><div><h2>Заметка координатора</h2><p>Видна только администраторам и разработчику — сам волонтёр её не видит.</p></div></div>
+    <div class="card-head"><div><h2>Заметка администратора</h2><p>Видна только администраторам и разработчику — сам волонтёр её не видит.</p></div></div>
     <div class="card-body">
       <form method="post">
         <?= csrfField() ?>

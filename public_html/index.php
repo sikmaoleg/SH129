@@ -4,15 +4,8 @@ require_once __DIR__ . '/includes/bootstrap.php';
 $pageTitle = 'Молодая Гвардия · Щёлково — волонтёрская организация округа';
 $activeNav = '';
 
-// Те же фото, что в галерее — держим порядок в согласии с gallery.php
-$heroPhotos = [
-    ['team.webp',     'Команда отделения'],
-    ['march.webp',    'Городское шествие'],
-    ['creative.webp', 'Съёмка команды'],
-    ['rink.webp',     'Спортивное мероприятие'],
-    ['cake.webp',     'День рождения отделения'],
-    ['rain.webp',     'Работаем в любую погоду'],
-];
+// Фото слайдера — управляются администратором в admin/hero.php
+$heroPhotos = fetchAll('SELECT image, caption FROM hero_slides ORDER BY sort ASC, id ASC');
 
 $news = fetchAll(
     "SELECT id, title, excerpt, cover, published_at
@@ -66,20 +59,22 @@ require __DIR__ . '/includes/header.php';
         <div class="stat"><?= icon('clock') ?><b><?= number_format($statHours, 0, '.', ' ') ?>+</b><span><?= plural($statHours, 'час', 'часа', 'часов') ?> добровольчества</span></div>
       </div>
     </div>
+    <?php if ($heroPhotos): ?>
     <div class="hero-visual">
       <div class="hero-visual-card hero-slider" id="heroSlider">
-        <?php foreach ($heroPhotos as $i => [$file, $caption]): ?>
+        <?php foreach ($heroPhotos as $i => $slide): ?>
           <div class="hero-slide <?= $i === 0 ? 'is-active' : '' ?>">
-            <img src="<?= url('assets/img/' . $file) ?>" alt="<?= e($caption) ?>" <?= $i === 0 ? '' : 'loading="lazy"' ?>>
+            <img src="<?= url($slide['image']) ?>" alt="<?= e($slide['caption'] ?? '') ?>" <?= $i === 0 ? '' : 'loading="lazy"' ?>>
           </div>
         <?php endforeach; ?>
         <div class="hero-slider-dots">
-          <?php foreach ($heroPhotos as $i => [$file, $caption]): ?>
-            <button type="button" class="<?= $i === 0 ? 'is-active' : '' ?>" data-slide="<?= $i ?>" aria-label="Фото: <?= e($caption) ?>"></button>
+          <?php foreach ($heroPhotos as $i => $slide): ?>
+            <button type="button" class="<?= $i === 0 ? 'is-active' : '' ?>" data-slide="<?= $i ?>" aria-label="Фото: <?= e($slide['caption'] ?? '') ?>"></button>
           <?php endforeach; ?>
         </div>
       </div>
     </div>
+    <?php endif; ?>
   </div>
 </section>
 
@@ -226,7 +221,7 @@ require __DIR__ . '/includes/header.php';
   <div class="container">
     <div>
       <h2>Как попасть в команду Молодой Гвардии Щёлково</h2>
-      <p>Заявку может подать любой житель округа от 14 лет. После проверки анкеты координатор откроет доступ в личный кабинет, где будут ваши мероприятия и достижения.</p>
+      <p>Заявку может подать любой житель округа от 14 лет. После проверки анкеты администратор откроет доступ в личный кабинет, где будут ваши мероприятия и достижения.</p>
       <a href="<?= url('register.php') ?>" class="btn btn-light">Подать заявку</a>
     </div>
     <div class="join-steps">
@@ -241,7 +236,7 @@ require __DIR__ . '/includes/header.php';
         <b>02</b>
         <div>
           <h3>Дождитесь одобрения</h3>
-          <p>Координатор проверит заявку и подтвердит вашу учётную запись.</p>
+          <p>Администратор проверит заявку и подтвердит вашу учётную запись.</p>
         </div>
       </div>
       <div class="join-step">

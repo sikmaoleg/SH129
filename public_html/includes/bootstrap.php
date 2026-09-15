@@ -274,6 +274,41 @@ function deleteAvatarFile(?string $filename): void
     }
 }
 
+/**
+ * Валидирует файл изображения по содержимому (не по MIME от клиента), при
+ * необходимости уменьшает (без обрезки — пропорции не трогаем) и сохраняет
+ * в uploads/<subdir>/. Возвращает имя файла или null, если это не изображение.
+ */
+function resizeAndSaveImage(string $srcPath, string $subdir, int $maxDim = 1800): ?string
+{
+    $info = @getimagesize($srcPath);
+    $loaders = [IMAGETYPE_JPEG => 'imagecreatefromjpeg', IMAGETYPE_PNG => 'imagecreatefrompng', IMAGETYPE_WEBP => 'imagecreatefromwebp'];
+    $src = ($info && isset($loaders[$info[2]])) ? $loaders[$info[2]]($srcPath) : false;
+    if (!$src) {
+        return null;
+    }
+
+    $w = imagesx($src);
+    $h = imagesy($src);
+    if (max($w, $h) > $maxDim) {
+        $scale = $maxDim / max($w, $h);
+        $nw = (int)round($w * $scale);
+        $nh = (int)round($h * $scale);
+        $dst = imagecreatetruecolor($nw, $nh);
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        imagedestroy($src);
+        $src = $dst;
+    }
+
+    $useWebp  = function_exists('imagewebp');
+    $filename = bin2hex(random_bytes(16)) . ($useWebp ? '.webp' : '.jpg');
+    $dir      = __DIR__ . '/../uploads/' . $subdir . '/';
+    $saved    = $useWebp ? imagewebp($src, $dir . $filename, 85) : imagejpeg($src, $dir . $filename, 88);
+    imagedestroy($src);
+
+    return $saved ? $filename : null;
+}
+
 // ---------------------------------------------------------------------
 // Форматирование
 // ---------------------------------------------------------------------
@@ -281,6 +316,16 @@ const RU_MONTHS = [1=>'января',2=>'февраля',3=>'марта',4=>'а�
                    7=>'июля',8=>'августа',9=>'сентября',10=>'октября',11=>'ноября',12=>'декабря'];
 const RU_MONTHS_SHORT = [1=>'ЯНВ',2=>'ФЕВ',3=>'МАР',4=>'АПР',5=>'МАЯ',6=>'ИЮН',
                          7=>'ИЮЛ',8=>'АВГ',9=>'СЕН',10=>'ОКТ',11=>'НОЯ',12=>'ДЕК'];
+
+/**
+ * Дата «в организации с»: реальная дата вступления в МГЕР, если админ её
+ * указал на карточке волонтёра, иначе дата регистрации на сайте — чтобы
+ * это значение не расходилось в разных местах интерфейса.
+ */
+function membershipDate(array $user): ?string
+{
+    return $user['mger_joined_at'] ?: $user['created_at'];
+}
 
 function ruDate(?string $datetime, bool $withTime = false): string
 {

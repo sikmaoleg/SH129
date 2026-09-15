@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             q("INSERT INTO event_registrations (event_id, user_id, status) VALUES (?,?,'registered')
                ON DUPLICATE KEY UPDATE status = 'registered'", [$id, (int)$me['id']]);
             logAction('event_signup', 'event', $id);
-            flash('success', 'Вы записаны на мероприятие. Координатор свяжется с вами при необходимости.');
+            flash('success', 'Вы записаны на мероприятие. Администратор свяжется с вами при необходимости.');
         }
     } elseif ($action === 'cancel') {
         q("UPDATE event_registrations SET status='cancelled' WHERE event_id = ? AND user_id = ?", [$id, (int)$me['id']]);

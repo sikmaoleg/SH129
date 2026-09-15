@@ -35,6 +35,7 @@ $menus = [
             'users'        => ['Волонтёры',            'admin/users.php',        'users'],
             'events'       => ['Мероприятия',          'admin/events.php',       'calendar'],
             'news'         => ['Новости',               'admin/news.php',         'clipboard'],
+            'hero'         => ['Фото на главной',       'admin/hero.php',         'camera'],
             'points'       => ['Начисление баллов',     'admin/points.php',       'medal'],
             'rating'       => ['Рейтинг',               'admin/rating.php',       'target'],
             'badges'       => ['Достижения',            'admin/badges.php',       'academic-cap'],

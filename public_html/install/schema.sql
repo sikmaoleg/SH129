@@ -164,6 +164,19 @@ CREATE TABLE IF NOT EXISTS `settings` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
+-- Фото слайдера на главной (правит администратор)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `hero_slides` (
+  `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `image`      VARCHAR(190) NOT NULL,
+  `caption`    VARCHAR(190)     NULL,
+  `sort`       INT NOT NULL DEFAULT 0,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_image` (`image`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
 -- Журнал действий
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `audit_log` (
@@ -201,6 +214,14 @@ INSERT IGNORE INTO `badges` (`code`,`title`,`description`,`icon`) VALUES
 ('mentor','Наставник','Помог освоиться трём новичкам','N'),
 ('night','Ночная смена','Участие в срочной или ночной задаче','24'),
 ('month','Волонтёр месяца','Первое место в месячном рейтинге','1');
+
+INSERT IGNORE INTO `hero_slides` (`image`,`caption`,`sort`) VALUES
+('assets/img/team.webp','Команда отделения',10),
+('assets/img/march.webp','Городское шествие',20),
+('assets/img/creative.webp','Съёмка команды',30),
+('assets/img/rink.webp','Спортивное мероприятие',40),
+('assets/img/cake.webp','День рождения отделения',50),
+('assets/img/rain.webp','Работаем в любую погоду',60);
 
 INSERT IGNORE INTO `settings` (`key`,`value`) VALUES
 ('org_name','Молодая Гвардия · Щёлково'),

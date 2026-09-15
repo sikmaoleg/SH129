@@ -40,7 +40,7 @@ require __DIR__ . '/../includes/panel_header.php';
   <div class="card-head">
     <div>
       <h2>Таблица рейтинга</h2>
-      <p>Баллы начисляются координаторами после подтверждения участия в мероприятии.</p>
+      <p>Баллы начисляются администраторами после подтверждения участия в мероприятии.</p>
     </div>
     <div style="display:flex;gap:8px;">
       <a href="<?= url('cabinet/rating.php') ?>" class="btn btn-sm <?= $period !== 'month' ? 'btn-primary' : 'btn-outline' ?>">За всё время</a>
