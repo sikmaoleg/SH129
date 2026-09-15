@@ -107,7 +107,7 @@ require __DIR__ . '/../includes/panel_header.php';
           <?php foreach ($items as $n): ?>
             <tr>
               <td style="white-space:nowrap;"><?= e(ruDate($n['published_at'])) ?></td>
-              <td><b><?= e($n['title']) ?></b></td>
+              <td><b><?= e($n['title']) ?></b><?php if ($n['tg_message_id']): ?> <span class="tag tag-blue"><?= icon('telegram') ?> Telegram</span><?php endif; ?></td>
               <td><span class="tag <?= $n['status'] === 'published' ? 'tag-approved' : 'tag-blocked' ?>"><?= $n['status'] === 'published' ? 'опубликовано' : 'черновик' ?></span></td>
               <td style="color:var(--muted);"><?= e(trim(($n['last_name'] ?? '') . ' ' . ($n['first_name'] ?? '')) ?: '—') ?></td>
               <td>

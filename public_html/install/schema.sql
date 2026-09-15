@@ -148,8 +148,10 @@ CREATE TABLE IF NOT EXISTS `news` (
   `status`       ENUM('draft','published') NOT NULL DEFAULT 'published',
   `published_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `author_id`    INT UNSIGNED     NULL,
+  `tg_message_id` BIGINT           NULL,
   PRIMARY KEY (`id`),
-  KEY `idx_pub` (`status`,`published_at`)
+  KEY `idx_pub` (`status`,`published_at`),
+  UNIQUE KEY `uniq_tg_message` (`tg_message_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------

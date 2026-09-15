@@ -48,6 +48,7 @@ $menus = [
             'index'    => ['Состояние системы', 'dev/index.php',    'shield-check'],
             'database' => ['База данных',       'dev/database.php', 'grid'],
             'settings' => ['Настройки сайта',   'dev/settings.php', 'target'],
+            'telegram' => ['Telegram',          'dev/telegram.php', 'telegram'],
             'logs'     => ['Журнал действий',   'dev/logs.php',     'clipboard'],
         ],
     ],
