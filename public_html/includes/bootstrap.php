@@ -233,10 +233,12 @@ function handleAvatarUpload(array $file): array
     }
 
     $info = @getimagesize($file['tmp_name']);
-    $loaders = [IMAGETYPE_JPEG => 'imagecreatefromjpeg', IMAGETYPE_PNG => 'imagecreatefrompng', IMAGETYPE_WEBP => 'imagecreatefromwebp'];
-    $src = ($info && isset($loaders[$info[2]])) ? $loaders[$info[2]]($file['tmp_name']) : false;
+    $src = ($info && isset(IMAGE_LOADERS[$info[2]])) ? loadImageAsGd($file['tmp_name'], $info[2]) : false;
     if (!$src) {
-        return ['error' => 'Поддерживаются только изображения JPG, PNG или WEBP.'];
+        if (looksLikeHeic($file['tmp_name'])) {
+            return ['error' => 'Это фото в формате HEIC/HEIF — на айфоне такое получается при настройке камеры «Высокая эффективность». Откройте фото в приложении «Фото», нажмите «Поделиться» → «Сохранить как JPEG» (или пришлите файл через мессенджер — он обычно сам конвертирует в JPEG) и загрузите заново.'];
+        }
+        return ['error' => 'Не удалось распознать файл как изображение. Поддерживаются JPG, PNG и WEBP — попробуйте пересохранить фото в одном из этих форматов.'];
     }
     // Защита от нехватки памяти на очень крупных снимках (50 МБ файл может оказаться
     // фото в десятки мегапикселей — imagecreatefrom* держит его целиком в памяти).
@@ -274,6 +276,56 @@ function deleteAvatarFile(?string $filename): void
     }
 }
 
+/** Форматы, которые умеем обрабатывать, и соответствующие функции загрузки в GD. */
+const IMAGE_LOADERS = [
+    IMAGETYPE_JPEG => 'imagecreatefromjpeg',
+    IMAGETYPE_PNG  => 'imagecreatefrompng',
+    IMAGETYPE_WEBP => 'imagecreatefromwebp',
+];
+
+/**
+ * Загружает изображение в GD-ресурс. Если родной загрузчик GD не справился
+ * (типичный случай — JPEG в цветовой модели CMYK или с нестандартными
+ * маркерами, которые libjpeg в составе GD не умеет декодировать, хотя файл
+ * абсолютно валиден), пробуем ImageMagick, если он установлен на сервере —
+ * он заметно терпимее к таким файлам. Дальше вся остальная обработка
+ * (обрезка, resize, сохранение) — уже обычный GD-код, независимо от того,
+ * кто фактически декодировал исходник.
+ */
+function loadImageAsGd(string $path, int $imageType)
+{
+    if (!isset(IMAGE_LOADERS[$imageType])) {
+        return false;
+    }
+    $src = @(IMAGE_LOADERS[$imageType])($path);
+    if ($src !== false) {
+        return $src;
+    }
+    if (!extension_loaded('imagick')) {
+        return false;
+    }
+    try {
+        $im = new Imagick($path);
+        $im->setImageFormat('png32'); // без потерь, с альфа-каналом — просто мост в GD
+        $blob = $im->getImageBlob();
+        $im->destroy();
+        $gd = @imagecreatefromstring($blob);
+        return $gd !== false ? $gd : false;
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
+/** Грубая проверка по сигнатуре файла: HEIC/HEIF (типичный формат фото на iPhone). */
+function looksLikeHeic(string $path): bool
+{
+    $head = @file_get_contents($path, false, null, 0, 12);
+    if ($head === false || strlen($head) < 12 || substr($head, 4, 4) !== 'ftyp') {
+        return false;
+    }
+    return in_array(substr($head, 8, 4), ['heic', 'heix', 'heim', 'heis', 'hevc', 'hevx', 'mif1', 'msf1'], true);
+}
+
 /**
  * Валидирует файл изображения по содержимому (не по MIME от клиента), при
  * необходимости уменьшает (без обрезки — пропорции не трогаем) и сохраняет
@@ -282,8 +334,7 @@ function deleteAvatarFile(?string $filename): void
 function resizeAndSaveImage(string $srcPath, string $subdir, int $maxDim = 1800): ?string
 {
     $info = @getimagesize($srcPath);
-    $loaders = [IMAGETYPE_JPEG => 'imagecreatefromjpeg', IMAGETYPE_PNG => 'imagecreatefrompng', IMAGETYPE_WEBP => 'imagecreatefromwebp'];
-    $src = ($info && isset($loaders[$info[2]])) ? $loaders[$info[2]]($srcPath) : false;
+    $src = ($info && isset(IMAGE_LOADERS[$info[2]])) ? loadImageAsGd($srcPath, $info[2]) : false;
     if (!$src) {
         return null;
     }
