@@ -153,7 +153,7 @@ function runTelegramSync(): array
         }
 
         q('INSERT INTO news (title, excerpt, body, cover, status, published_at, tg_message_id) VALUES (?,?,?,?,?,?,?)',
-          [$title, $excerpt, $text, $cover, 'draft', date('Y-m-d H:i:s', (int)($post['date'] ?? time())), $tgMessageId]);
+          [$title, $excerpt, $text, $cover, 'published', date('Y-m-d H:i:s', (int)($post['date'] ?? time())), $tgMessageId]);
         $imported++;
     }
 
