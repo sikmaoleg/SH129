@@ -46,6 +46,10 @@ function db(): PDO
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
         ]);
+        // Некоторые хостинги игнорируют charset из DSN при handshake
+        // (skip_character_set_client_handshake) и молча открывают
+        // соединение в utf8mb3 — принудительно переключаем явной командой.
+        $pdo->exec("SET NAMES '{$d['charset']}'");
     } catch (PDOException $e) {
         http_response_code(500);
         if (!empty($GLOBALS['config']['debug'])) {
