@@ -1,8 +1,8 @@
 # На некоторых хостингах PHP работает через FastCGI/CGI и по умолчанию
 # не передаёт заголовок Authorization в $_SERVER -- без этого не работает
-# Bearer-токен мобильного приложения. CGIPassAuth чинит это (Apache 2.4.13+).
-CGIPassAuth On
-
+# Bearer-токен мобильного приложения. Продакшен -- Apache 2.4.6, где ещё
+# нет CGIPassAuth (появился в 2.4.13), поэтому используем только
+# mod_rewrite: он пробрасывает заголовок в HTTP_AUTHORIZATION.
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteCond %{HTTP:Authorization} ^(.+)$
