@@ -6,7 +6,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     apiError('Метод не поддерживается.', 405);
 }
 
-$order = ['leader', 'local_staff', 'staff', 'activist'];
+$order = ['leader', 'local_staff', 'staff'];
 $placeholders = implode(',', array_fill(0, count($order), '?'));
 $members = fetchAll(
     "SELECT id, last_name, first_name, middle_name, position, avatar, vk, telegram

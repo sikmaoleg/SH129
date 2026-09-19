@@ -3,7 +3,7 @@ require_once __DIR__ . '/includes/bootstrap.php';
 $pageTitle = 'Наша команда — Молодая Гвардия Щёлково';
 $activeNav = 'team';
 
-$order = ['leader', 'local_staff', 'staff', 'activist'];
+$order = ['leader', 'local_staff', 'staff'];
 $placeholders = implode(',', array_fill(0, count($order), '?'));
 $members = fetchAll(
     "SELECT id, last_name, first_name, middle_name, position, avatar, vk, telegram
