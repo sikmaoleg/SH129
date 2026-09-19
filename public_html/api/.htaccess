@@ -1,0 +1,10 @@
+# На некоторых хостингах PHP работает через FastCGI/CGI и по умолчанию
+# не передаёт заголовок Authorization в $_SERVER -- без этого не работает
+# Bearer-токен мобильного приложения. CGIPassAuth чинит это (Apache 2.4.13+).
+CGIPassAuth On
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTP:Authorization} ^(.+)$
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]
+</IfModule>
