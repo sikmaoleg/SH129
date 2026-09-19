@@ -16,7 +16,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'delete') {
         $id = (int)($_POST['id'] ?? 0);
-        q('DELETE FROM news WHERE id = ?', [$id]);
+        $images = fetchAll('SELECT image FROM news_images WHERE news_id = ?', [$id]);
+        foreach ($images as $img) {
+            $path = __DIR__ . '/../' . $img['image'];
+            if (is_file($path)) {
+                @unlink($path);
+            }
+        }
+        q('DELETE FROM news WHERE id = ?', [$id]); // news_images удаляются каскадом
         logAction('news_delete', 'news', $id);
         flash('info', 'Новость удалена.');
         redirect('admin/news.php');

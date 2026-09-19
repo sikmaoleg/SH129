@@ -111,6 +111,10 @@ function runTelegramSync(): array
     $wantUsername = ltrim($channel, '@');
     $wantChatId   = ctype_digit(ltrim($channel, '-')) ? $channel : null;
 
+    // Сначала отбираем посты нашего канала. Фотоальбом Telegram присылает как
+    // несколько отдельных channel_post с одинаковым media_group_id -- их нужно
+    // собрать в один пост, а не импортировать как несколько новостей.
+    $posts = [];
     foreach ($updates as $upd) {
         $maxUpdateId = max($maxUpdateId, (int)$upd['update_id']);
         $post = $upd['channel_post'] ?? null;
@@ -125,16 +129,39 @@ function runTelegramSync(): array
             $skipped++;
             continue;
         }
+        $posts[] = $post;
+    }
 
-        $text = trim((string)($post['text'] ?? $post['caption'] ?? ''));
-        if ($text === '') {
-            $skipped++; // стикер, голосовое и т.п. без текста — пропускаем
+    $groups = []; // media_group_id => [посты...], в порядке появления
+    $singles = [];
+    foreach ($posts as $post) {
+        $gid = $post['media_group_id'] ?? null;
+        if ($gid !== null) {
+            $groups[$gid][] = $post;
+        } else {
+            $singles[] = [$post];
+        }
+    }
+
+    foreach (array_merge($groups, $singles) as $groupPosts) {
+        usort($groupPosts, fn($a, $b) => $a['message_id'] <=> $b['message_id']);
+        $tgMessageId = (int)$groupPosts[0]['message_id'];
+        if (fetchValue('SELECT id FROM news WHERE tg_message_id = ?', [$tgMessageId])) {
+            $skipped += count($groupPosts); // уже импортировано раньше
             continue;
         }
 
-        $tgMessageId = (int)$post['message_id'];
-        if (fetchValue('SELECT id FROM news WHERE tg_message_id = ?', [$tgMessageId])) {
-            $skipped++; // уже импортировано раньше
+        // В альбоме подпись есть только у одного из сообщений группы.
+        $text = '';
+        foreach ($groupPosts as $p) {
+            $t = trim((string)($p['text'] ?? $p['caption'] ?? ''));
+            if ($t !== '') {
+                $text = $t;
+                break;
+            }
+        }
+        if ($text === '') {
+            $skipped += count($groupPosts); // стикер, голосовое и т.п. без текста — пропускаем
             continue;
         }
 
@@ -145,15 +172,25 @@ function runTelegramSync(): array
         }
         $excerpt = mb_strimwidth(preg_replace('/\s+/u', ' ', $text), 0, 300, '…');
 
-        $cover = null;
-        if (!empty($post['photo'])) {
-            // В массиве photo — несколько размеров одного фото, берём самое крупное (последнее).
-            $best = end($post['photo']);
-            $cover = tgSaveNewsCover($token, $best['file_id']);
+        $images = [];
+        foreach ($groupPosts as $p) {
+            if (!empty($p['photo'])) {
+                // В массиве photo — несколько размеров одного фото, берём самое крупное (последнее).
+                $best = end($p['photo']);
+                $filename = tgSaveNewsCover($token, $best['file_id']);
+                if ($filename) {
+                    $images[] = $filename;
+                }
+            }
         }
+        $cover = $images[0] ?? null;
 
         q('INSERT INTO news (title, excerpt, body, cover, status, published_at, tg_message_id) VALUES (?,?,?,?,?,?,?)',
-          [$title, $excerpt, $text, $cover, 'published', date('Y-m-d H:i:s', (int)($post['date'] ?? time())), $tgMessageId]);
+          [$title, $excerpt, $text, $cover, 'published', date('Y-m-d H:i:s', (int)($groupPosts[0]['date'] ?? time())), $tgMessageId]);
+        $newsId = (int)db()->lastInsertId();
+        foreach ($images as $i => $filename) {
+            q('INSERT INTO news_images (news_id, image, sort) VALUES (?,?,?)', [$newsId, 'uploads/news/' . $filename, $i * 10]);
+        }
         $imported++;
     }
 

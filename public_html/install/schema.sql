@@ -155,6 +155,19 @@ CREATE TABLE IF NOT EXISTS `news` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
+-- Дополнительные фото новости (галерея из альбома Telegram и т.п.)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `news_images` (
+  `id`      INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `news_id` INT UNSIGNED NOT NULL,
+  `image`   VARCHAR(190) NOT NULL,
+  `sort`    INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `idx_news` (`news_id`),
+  CONSTRAINT `fk_news_images_news` FOREIGN KEY (`news_id`) REFERENCES `news` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
 -- Настройки (правит разработчик)
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `settings` (

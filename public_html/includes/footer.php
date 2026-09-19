@@ -38,6 +38,13 @@
   </div>
 </footer>
 
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Просмотр фото">
+  <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Закрыть"><?= icon('close') ?></button>
+  <button type="button" class="lightbox-prev" id="lightboxPrev" aria-label="Предыдущее фото"><?= icon('arrow-right', 'icon icon-flip') ?></button>
+  <img src="" alt="" id="lightboxImg">
+  <button type="button" class="lightbox-next" id="lightboxNext" aria-label="Следующее фото"><?= icon('arrow-right') ?></button>
+</div>
+
 <script src="<?= url('assets/js/main.js') ?>"></script>
 </body>
 </html>

@@ -13,6 +13,7 @@ if (!$n) {
 }
 $pageTitle = $n['title'] . ' — Молодая Гвардия Щёлково';
 $activeNav = 'news';
+$images = fetchAll('SELECT image FROM news_images WHERE news_id = ? ORDER BY sort ASC, id ASC', [$n['id']]);
 require __DIR__ . '/includes/header.php';
 ?>
 <div class="page-head">
@@ -26,7 +27,13 @@ require __DIR__ . '/includes/header.php';
   <div class="container">
     <div class="article">
       <p class="news-date"><?= e(ruDate($n['published_at'], true)) ?></p>
-      <?php if ($n['cover']): ?>
+      <?php if ($images): ?>
+        <div class="article-gallery <?= count($images) === 1 ? 'article-gallery-single' : '' ?>" data-lightbox-group="news<?= (int)$n['id'] ?>">
+          <?php foreach ($images as $img): ?>
+            <a href="<?= url($img['image']) ?>" class="lightbox-trigger"><img src="<?= url($img['image']) ?>" alt="" loading="lazy"></a>
+          <?php endforeach; ?>
+        </div>
+      <?php elseif ($n['cover']): ?>
         <img src="<?= url('uploads/news/'.$n['cover']) ?>" alt="">
       <?php endif; ?>
       <?php if ($n['excerpt']): ?><p><strong><?= e($n['excerpt']) ?></strong></p><?php endif; ?>

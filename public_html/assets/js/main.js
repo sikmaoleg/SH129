@@ -97,4 +97,57 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
   });
+
+  // Лайтбокс: увеличенный просмотр фото по клику, с переключением между фото группы
+  var lightbox = document.getElementById('lightbox');
+  if (lightbox) {
+    var lbImg   = document.getElementById('lightboxImg');
+    var lbPrev  = document.getElementById('lightboxPrev');
+    var lbNext  = document.getElementById('lightboxNext');
+    var lbItems = [];
+    var lbIndex = 0;
+
+    var show = function (i) {
+      lbIndex = (i + lbItems.length) % lbItems.length;
+      lbImg.src = lbItems[lbIndex].getAttribute('href');
+      var multi = lbItems.length > 1;
+      lbPrev.classList.toggle('lightbox-nav-hidden', !multi);
+      lbNext.classList.toggle('lightbox-nav-hidden', !multi);
+    };
+
+    var open = function (items, index) {
+      lbItems = items;
+      show(index);
+      lightbox.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+    };
+
+    var close = function () {
+      lightbox.classList.remove('is-open');
+      document.body.style.overflow = '';
+    };
+
+    document.querySelectorAll('[data-lightbox-group]').forEach(function (group) {
+      var items = Array.prototype.slice.call(group.querySelectorAll('.lightbox-trigger'));
+      items.forEach(function (link, idx) {
+        link.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          open(items, idx);
+        });
+      });
+    });
+
+    lbPrev.addEventListener('click', function () { show(lbIndex - 1); });
+    lbNext.addEventListener('click', function () { show(lbIndex + 1); });
+    document.getElementById('lightboxClose').addEventListener('click', close);
+    lightbox.addEventListener('click', function (ev) {
+      if (ev.target === lightbox) close();
+    });
+    document.addEventListener('keydown', function (ev) {
+      if (!lightbox.classList.contains('is-open')) return;
+      if (ev.key === 'Escape') close();
+      if (ev.key === 'ArrowLeft') show(lbIndex - 1);
+      if (ev.key === 'ArrowRight') show(lbIndex + 1);
+    });
+  }
 });
