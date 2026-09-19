@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { CabinetStackParamList } from '../navigation/types';
+import type { AuthGateParamList } from '../navigation/types';
 import { authApi } from '../api/endpoints';
 import { Button, ErrorBanner } from '../components/ui';
 import { colors, radius, spacing } from '../theme/colors';
 import { ApiError } from '../api/client';
 
-type Props = NativeStackScreenProps<CabinetStackParamList, 'Register'>;
+type Props = NativeStackScreenProps<AuthGateParamList, 'Register'>;
 
 function Field({
   label, value, onChangeText, placeholder, keyboardType, secureTextEntry, hint,

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { CabinetStackParamList } from '../navigation/types';
+import type { AuthGateParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
 import { Button, ErrorBanner } from '../components/ui';
 import { colors, radius, spacing } from '../theme/colors';
 import { ApiError } from '../api/client';
 
-type Props = NativeStackScreenProps<CabinetStackParamList, 'Login'>;
+type Props = NativeStackScreenProps<AuthGateParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   const { login } = useAuth();
@@ -36,11 +36,8 @@ export default function LoginScreen({ navigation }: Props) {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.logoWrap}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>МГ</Text>
-          </View>
-          <Text style={styles.title}>Молодая Гвардия</Text>
-          <Text style={styles.subtitle}>Щёлково</Text>
+          <Image source={require('../../assets/brand/badge.png')} style={styles.logoCircle} />
+          <Text style={styles.title}>Молодая Гвардия Щёлково</Text>
         </View>
 
         <Text style={styles.heading}>Вход в личный кабинет</Text>
@@ -89,12 +86,10 @@ const styles = StyleSheet.create({
   container: { flexGrow: 1, backgroundColor: colors.white, padding: spacing.lg, justifyContent: 'center' },
   logoWrap: { alignItems: 'center', marginBottom: spacing.xl },
   logoCircle: {
-    width: 64, height: 64, borderRadius: 32, backgroundColor: colors.blue900,
-    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm,
+    width: 84, height: 84, borderRadius: 42, marginBottom: spacing.md,
+    borderWidth: 1, borderColor: colors.border,
   },
-  logoText: { color: '#fff', fontWeight: '800', fontSize: 18 },
-  title: { fontSize: 20, fontWeight: '800', color: colors.blue900 },
-  subtitle: { fontSize: 14, color: colors.muted },
+  title: { fontSize: 18, fontWeight: '800', color: colors.blue900, textAlign: 'center' },
   heading: { fontSize: 22, fontWeight: '800', color: colors.text, marginBottom: spacing.lg },
   field: { marginBottom: spacing.md },
   label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginBottom: 6 },

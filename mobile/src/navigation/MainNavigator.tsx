@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { CabinetStackParamList, EventsStackParamList, HomeStackParamList, MainTabParamList, NewsStackParamList } from './types';
@@ -23,7 +23,7 @@ const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 function HomeStackNavigator() {
   return (
     <HomeStack.Navigator screenOptions={screenOptions}>
-      <HomeStack.Screen name="HomeScreen" component={HomeScreen} options={{ title: 'Молодая Гвардия' }} />
+      <HomeStack.Screen name="HomeScreen" component={HomeScreen} options={{ title: 'Молодая Гвардия Щёлково' }} />
       <HomeStack.Screen name="NewsDetail" component={NewsDetailScreen} options={{ title: 'Новость' }} />
       <HomeStack.Screen name="EventDetail" component={EventDetailScreen} options={{ title: 'Мероприятие' }} />
     </HomeStack.Navigator>
@@ -42,6 +42,22 @@ function NewsStackNavigator() {
 
 const EventsStack = createNativeStackNavigator<EventsStackParamList>();
 function EventsStackNavigator() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingView />;
+  }
+
+  // Как и на сайте (events.php требует вход) -- список мероприятий закрыт от гостей.
+  if (!user) {
+    return (
+      <EventsStack.Navigator screenOptions={screenOptions}>
+        <EventsStack.Screen name="Login" component={LoginScreen} options={{ title: 'Вход', headerShown: false }} />
+        <EventsStack.Screen name="Register" component={RegisterScreen} options={{ title: 'Анкета волонтёра' }} />
+      </EventsStack.Navigator>
+    );
+  }
+
   return (
     <EventsStack.Navigator screenOptions={screenOptions}>
       <EventsStack.Screen name="EventsList" component={EventsListScreen} options={{ title: 'Мероприятия' }} />
@@ -87,8 +103,9 @@ const screenOptions = {
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
-  return <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>{emoji}</Text>;
+type IoniconName = keyof typeof Ionicons.glyphMap;
+function TabIcon({ name, focused }: { name: IoniconName; focused: boolean }) {
+  return <Ionicons name={name} size={24} color={focused ? colors.accent : colors.muted} />;
 }
 
 export default function MainNavigator() {
@@ -98,27 +115,40 @@ export default function MainNavigator() {
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
+        tabBarStyle: {
+          height: 68,
+          paddingBottom: 10,
+          paddingTop: 8,
+          borderTopWidth: 1,
+          borderTopColor: colors.border,
+          shadowColor: colors.blue900,
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: -4 },
+          elevation: 8,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '700', marginTop: 2 },
       }}
     >
       <Tab.Screen
         name="HomeTab"
         component={HomeStackNavigator}
-        options={{ title: 'Главная', tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} /> }}
+        options={{ title: 'Главная', tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} /> }}
       />
       <Tab.Screen
         name="NewsTab"
         component={NewsStackNavigator}
-        options={{ title: 'Новости', tabBarIcon: ({ focused }) => <TabIcon emoji="📰" focused={focused} /> }}
+        options={{ title: 'Новости', tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'newspaper' : 'newspaper-outline'} focused={focused} /> }}
       />
       <Tab.Screen
         name="EventsTab"
         component={EventsStackNavigator}
-        options={{ title: 'Афиша', tabBarIcon: ({ focused }) => <TabIcon emoji="📅" focused={focused} /> }}
+        options={{ title: 'Афиша', tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'calendar' : 'calendar-outline'} focused={focused} /> }}
       />
       <Tab.Screen
         name="CabinetTab"
         component={CabinetStackNavigator}
-        options={{ title: 'Кабинет', tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} /> }}
+        options={{ title: 'Кабинет', tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'person-circle' : 'person-circle-outline'} focused={focused} /> }}
       />
     </Tab.Navigator>
   );

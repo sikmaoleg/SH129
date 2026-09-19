@@ -9,14 +9,17 @@ export type NewsStackParamList = {
   NewsDetail: { id: number };
 };
 
-export type EventsStackParamList = {
+export type AuthGateParamList = {
+  Login: undefined;
+  Register: undefined;
+};
+
+export type EventsStackParamList = AuthGateParamList & {
   EventsList: undefined;
   EventDetail: { id: number };
 };
 
-export type CabinetStackParamList = {
-  Login: undefined;
-  Register: undefined;
+export type CabinetStackParamList = AuthGateParamList & {
   CabinetHome: undefined;
   MyEvents: undefined;
   Rating: undefined;

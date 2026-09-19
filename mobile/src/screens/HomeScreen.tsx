@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, Image, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, FlatList, Image, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HomeStackParamList } from '../navigation/types';
 import { homeApi } from '../api/endpoints';
@@ -9,6 +9,8 @@ import { colors, radius, spacing } from '../theme/colors';
 import { ruDate, ruDay, plural } from '../utils/date';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'HomeScreen'>;
+
+const NEWS_CARD_WIDTH = Math.round(Dimensions.get('window').width * 0.78);
 
 export default function HomeScreen({ navigation }: Props) {
   const { data, loading, refreshing, error, refresh } = useApi(() => homeApi.get());
@@ -72,14 +74,23 @@ export default function HomeScreen({ navigation }: Props) {
 
       <Text style={styles.sectionTitle}>Новости отделения</Text>
       {data?.news?.length ? (
-        data.news.map((n) => (
-          <PressableCard key={n.id} style={styles.newsCard} onPress={() => navigation.navigate('NewsDetail', { id: n.id })}>
-            {n.cover ? <Image source={{ uri: n.cover }} style={styles.newsCover} /> : null}
-            <Text style={styles.newsDate}>{ruDate(n.publishedAt)}</Text>
-            <Text style={styles.newsTitle}>{n.title}</Text>
-            {n.excerpt ? <Text style={styles.newsExcerpt} numberOfLines={2}>{n.excerpt}</Text> : null}
-          </PressableCard>
-        ))
+        <FlatList
+          data={data.news}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(n) => String(n.id)}
+          snapToInterval={NEWS_CARD_WIDTH + spacing.md}
+          decelerationRate="fast"
+          contentContainerStyle={{ paddingHorizontal: spacing.md, gap: spacing.md }}
+          renderItem={({ item: n }) => (
+            <PressableCard style={{ width: NEWS_CARD_WIDTH, marginHorizontal: 0 }} onPress={() => navigation.navigate('NewsDetail', { id: n.id })}>
+              {n.cover ? <Image source={{ uri: n.cover }} style={styles.newsCover} /> : null}
+              <Text style={styles.newsDate}>{ruDate(n.publishedAt)}</Text>
+              <Text style={styles.newsTitle}>{n.title}</Text>
+              {n.excerpt ? <Text style={styles.newsExcerpt} numberOfLines={2}>{n.excerpt}</Text> : null}
+            </PressableCard>
+          )}
+        />
       ) : (
         <EmptyState title="Новостей пока нет" />
       )}
@@ -129,7 +140,6 @@ const styles = StyleSheet.create({
   honorName: { fontSize: 16, fontWeight: '800', color: colors.text },
   honorNote: { fontSize: 13, color: colors.muted, marginTop: 2 },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginHorizontal: spacing.md, marginTop: spacing.md, marginBottom: spacing.sm },
-  newsCard: {},
   newsCover: { width: '100%', height: 140, borderRadius: radius.md, marginBottom: spacing.sm },
   newsDate: { fontSize: 12, fontWeight: '700', color: colors.accent, marginBottom: 4 },
   newsTitle: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: 4 },

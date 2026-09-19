@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "МГ Щёлково",
+    "name": "Молодая Гвардия Щёлково",
     "slug": "mg-schelkovo",
     "scheme": "mgschelkovo",
     "version": "1.0.0",
@@ -23,7 +23,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0A1E45",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -40,6 +40,15 @@
         "expo-image-picker",
         {
           "photosPermission": "Приложению нужен доступ к фото, чтобы вы могли загрузить аватар."
+        }
+      ],
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#0A1E45",
+          "resizeMode": "contain"
         }
       ]
     ]
