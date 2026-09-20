@@ -247,7 +247,6 @@ function handleAvatarUpload(array $file): array
     // Защита от нехватки памяти на очень крупных снимках (50 МБ файл может оказаться
     // фото в десятки мегапикселей — imagecreatefrom* держит его целиком в памяти).
     if ($info[0] * $info[1] > 50_000_000) {
-        imagedestroy($src);
         return ['error' => 'Слишком высокое разрешение фото. Уменьшите изображение и попробуйте снова.'];
     }
 
@@ -257,13 +256,11 @@ function handleAvatarUpload(array $file): array
     $target = min(480, $side);
     $dst = imagecreatetruecolor($target, $target);
     imagecopyresampled($dst, $src, 0, 0, (int)(($w - $side) / 2), (int)(($h - $side) / 2), $target, $target, $side, $side);
-    imagedestroy($src);
 
     $useWebp  = function_exists('imagewebp');
     $filename = bin2hex(random_bytes(16)) . ($useWebp ? '.webp' : '.jpg');
     $dir      = __DIR__ . '/../uploads/avatars/';
     $saved    = $useWebp ? imagewebp($dst, $dir . $filename, 82) : imagejpeg($dst, $dir . $filename, 85);
-    imagedestroy($dst);
 
     return $saved ? ['filename' => $filename] : ['error' => 'Не удалось сохранить фото. Попробуйте ещё раз.'];
 }
@@ -351,7 +348,6 @@ function resizeAndSaveImage(string $srcPath, string $subdir, int $maxDim = 1800)
         $nh = (int)round($h * $scale);
         $dst = imagecreatetruecolor($nw, $nh);
         imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
-        imagedestroy($src);
         $src = $dst;
     }
 
@@ -359,7 +355,6 @@ function resizeAndSaveImage(string $srcPath, string $subdir, int $maxDim = 1800)
     $filename = bin2hex(random_bytes(16)) . ($useWebp ? '.webp' : '.jpg');
     $dir      = __DIR__ . '/../uploads/' . $subdir . '/';
     $saved    = $useWebp ? imagewebp($src, $dir . $filename, 85) : imagejpeg($src, $dir . $filename, 88);
-    imagedestroy($src);
 
     return $saved ? $filename : null;
 }

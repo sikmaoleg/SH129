@@ -24,7 +24,6 @@ function tgApiRequest(string $token, string $method, array $params = []): array
     ]);
     $raw = curl_exec($ch);
     $curlError = curl_error($ch);
-    curl_close($ch);
 
     if ($raw === false) {
         throw new RuntimeException('Не удалось связаться с Telegram: ' . $curlError);
@@ -56,7 +55,6 @@ function tgDownloadFile(string $token, string $fileId): ?string
         CURLOPT_CONNECTTIMEOUT => 10,
     ]);
     $data = curl_exec($ch);
-    curl_close($ch);
     return $data === false ? null : $data;
 }
 
