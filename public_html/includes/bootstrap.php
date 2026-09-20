@@ -150,6 +150,15 @@ function url(string $path = ''): string
     global $config;
     return rtrim($config['base_url'] ?? '', '/') . '/' . ltrim($path, '/');
 }
+/** Ссылка на статику (css/js) с версией по времени изменения файла -- чтобы
+ *  правки не залипали в недельном браузерном кэше (см. .htaccess) до жёсткого
+ *  обновления страницы пользователем. */
+function assetUrl(string $path): string
+{
+    $file = APP_ROOT . '/' . ltrim($path, '/');
+    $version = is_file($file) ? filemtime($file) : time();
+    return url($path) . '?v=' . $version;
+}
 /** Блок кнопок «Поделиться»: ВК, Telegram, копирование ссылки */
 function shareButtons(string $pageUrl, string $title): string
 {

@@ -382,12 +382,24 @@ h1,h2,h3,h4{line-height:1.14;font-weight:800;color:var(--blue-900);letter-spacin
 .article h2{font-size:1.4rem;margin:32px 0 14px;}
 .article img{border-radius:var(--radius);margin:22px 0;}
 
-.article-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin:22px 0;}
-.article-gallery-single{grid-template-columns:1fr;}
-.article-gallery a{display:block;position:relative;aspect-ratio:1;border-radius:var(--radius);overflow:hidden;background:var(--blue-50,#eef2f8);}
-.article-gallery-single a{aspect-ratio:16/10;}
+/* Мозаика фото в посте — компонуется по количеству фото, как альбом в Telegram,
+   а не единой сеткой одинаковых квадратов. */
+.article-gallery{display:grid;gap:6px;margin:22px 0;border-radius:var(--radius);overflow:hidden;}
+.article-gallery a{display:block;position:relative;overflow:hidden;background:var(--blue-050,#eef2f8);}
 .article-gallery img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .25s;}
 .article-gallery a:hover img{transform:scale(1.06);}
+
+.article-gallery[data-count="1"]{grid-template-columns:1fr;aspect-ratio:16/10;}
+
+.article-gallery[data-count="2"]{grid-template-columns:1fr 1fr;aspect-ratio:16/9;}
+
+.article-gallery[data-count="3"]{grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr;aspect-ratio:4/3;}
+.article-gallery[data-count="3"] a:first-child{grid-row:1 / span 2;}
+
+.article-gallery[data-count="4"]{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;aspect-ratio:4/3;}
+
+.article-gallery[data-count="many"]{grid-template-columns:repeat(3,1fr);}
+.article-gallery[data-count="many"] a{aspect-ratio:1;}
 
 /* ---------- Лайтбокс (просмотр фото крупно) ---------- */
 .lightbox{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;padding:56px 24px;background:rgba(8,16,32,.92);opacity:0;pointer-events:none;transition:opacity .2s;}

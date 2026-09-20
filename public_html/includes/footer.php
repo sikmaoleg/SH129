@@ -45,6 +45,6 @@
   <button type="button" class="lightbox-next" id="lightboxNext" aria-label="Следующее фото"><?= icon('arrow-right') ?></button>
 </div>
 
-<script src="<?= url('assets/js/main.js') ?>"></script>
+<script src="<?= assetUrl('assets/js/main.js') ?>"></script>
 </body>
 </html>

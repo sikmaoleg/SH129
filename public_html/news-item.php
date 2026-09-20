@@ -28,7 +28,8 @@ require __DIR__ . '/includes/header.php';
     <div class="article">
       <p class="news-date"><?= e(ruDate($n['published_at'], true)) ?></p>
       <?php if ($images): ?>
-        <div class="article-gallery <?= count($images) === 1 ? 'article-gallery-single' : '' ?>" data-lightbox-group="news<?= (int)$n['id'] ?>">
+        <?php $galleryCount = count($images) <= 4 ? (string)count($images) : 'many'; ?>
+        <div class="article-gallery" data-count="<?= $galleryCount ?>" data-lightbox-group="news<?= (int)$n['id'] ?>">
           <?php foreach ($images as $img): ?>
             <a href="<?= url($img['image']) ?>" class="lightbox-trigger"><img src="<?= url($img['image']) ?>" alt="" loading="lazy"></a>
           <?php endforeach; ?>

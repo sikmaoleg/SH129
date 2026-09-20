@@ -33,7 +33,7 @@ $metaDescription = 'Местное отделение «Молодой Гвар�
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="<?= url('assets/css/site.css') ?>">
+<link rel="stylesheet" href="<?= assetUrl('assets/css/site.css') ?>">
 <link rel="icon" href="<?= url('favicon.ico') ?>" sizes="any">
 <link rel="icon" href="<?= url('assets/img/favicon/favicon-32.png') ?>" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="<?= url('assets/img/favicon/apple-touch-icon.png') ?>">
