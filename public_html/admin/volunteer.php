@@ -58,6 +58,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             logAction('avatar_remove', 'user', $userId);
             flash('info', 'Фото профиля удалено.');
         }
+    } elseif ($action === 'profile') {
+        $fields = [
+            'last_name'   => trim((string)($_POST['last_name'] ?? '')),
+            'first_name'  => trim((string)($_POST['first_name'] ?? '')),
+            'middle_name' => trim((string)($_POST['middle_name'] ?? '')),
+            'email'       => mb_strtolower(trim((string)($_POST['email'] ?? ''))),
+            'phone'       => trim((string)($_POST['phone'] ?? '')),
+            'birth_date'  => trim((string)($_POST['birth_date'] ?? '')),
+            'vk'          => trim((string)($_POST['vk'] ?? '')),
+            'telegram'    => trim((string)($_POST['telegram'] ?? '')),
+            'school'      => trim((string)($_POST['school'] ?? '')),
+            'about'       => trim((string)($_POST['about'] ?? '')),
+        ];
+        $errors = [];
+        if ($fields['last_name'] === '' || $fields['first_name'] === '') {
+            $errors[] = 'Фамилия и имя обязательны.';
+        }
+        if ($fields['email'] === '' || !filter_var($fields['email'], FILTER_VALIDATE_EMAIL)) {
+            $errors[] = 'Электронная почта указана в неверном формате.';
+        } elseif (fetchValue('SELECT id FROM users WHERE email = ? AND id <> ?', [$fields['email'], $userId])) {
+            $errors[] = 'Этот адрес уже используется другим пользователем.';
+        }
+        if ($fields['birth_date'] !== '' && !DateTime::createFromFormat('Y-m-d', $fields['birth_date'])) {
+            $errors[] = 'Некорректная дата рождения.';
+        }
+        if ($errors) {
+            foreach ($errors as $er) { flash('error', $er); }
+        } else {
+            q('UPDATE users SET last_name=?, first_name=?, middle_name=?, email=?, phone=?, birth_date=?, vk=?, telegram=?, school=?, about=? WHERE id=?', [
+                $fields['last_name'], $fields['first_name'], $fields['middle_name'] ?: null,
+                $fields['email'], $fields['phone'] ?: null, $fields['birth_date'] !== '' ? $fields['birth_date'] : null,
+                $fields['vk'] ?: null, $fields['telegram'] ?: null, $fields['school'] ?: null, $fields['about'] ?: null,
+                $userId,
+            ]);
+            logAction('profile_update_by_admin', 'user', $userId);
+            flash('success', 'Данные волонтёра обновлены.');
+        }
     } else {
         $notes = trim((string)($_POST['coordinator_notes'] ?? ''));
         q('UPDATE users SET coordinator_notes = ? WHERE id = ?', [$notes !== '' ? $notes : null, $userId]);
@@ -88,21 +125,34 @@ require __DIR__ . '/../includes/panel_header.php';
   <div class="card-head">
     <div>
       <h2><?= e($v['last_name'] . ' ' . $v['first_name'] . ' ' . $v['middle_name']) ?></h2>
-      <p><?= e(positionLabel($v['position'])) ?> · в организации с <?= e(ruDate(membershipDate($v))) ?></p>
+      <p><?= e(positionLabel($v['position'])) ?> · <?= (int)$v['points'] ?> <?= plural((int)$v['points'], 'балл', 'балла', 'баллов') ?> · в организации с <?= e(ruDate(membershipDate($v))) ?></p>
     </div>
     <a href="<?= url('admin/points.php?user_id=' . $userId) ?>" class="btn btn-outline btn-sm">Начислить баллы</a>
   </div>
   <div class="card-body">
-    <table class="kv">
-      <tr><th>Почта</th><td style="font-family:inherit;"><?= e($v['email']) ?></td></tr>
-      <tr><th>Телефон</th><td style="font-family:inherit;"><?= e($v['phone'] ?: '—') ?></td></tr>
-      <tr><th>Дата рождения</th><td style="font-family:inherit;"><?= e(ruDate($v['birth_date'])) ?></td></tr>
-      <tr><th>Школа / работа</th><td style="font-family:inherit;"><?= e($v['school'] ?: '—') ?></td></tr>
-      <tr><th>ВКонтакте</th><td style="font-family:inherit;"><?= e($v['vk'] ?: '—') ?></td></tr>
-      <tr><th>Telegram</th><td style="font-family:inherit;"><?= e($v['telegram'] ?: '—') ?></td></tr>
-      <tr><th>Баллы</th><td style="font-family:inherit;"><?= (int)$v['points'] ?> <?= plural((int)$v['points'], 'балл', 'балла', 'баллов') ?></td></tr>
-      <tr><th>Вступил(а) в МГЕР</th><td style="font-family:inherit;"><?= e(ruDate($v['mger_joined_at'] ?? null)) ?></td></tr>
-    </table>
+    <form method="post">
+      <?= csrfField() ?>
+      <input type="hidden" name="action" value="profile">
+      <div class="field-row">
+        <div class="field"><label for="last_name">Фамилия</label><input type="text" id="last_name" name="last_name" value="<?= e($v['last_name']) ?>" required></div>
+        <div class="field"><label for="first_name">Имя</label><input type="text" id="first_name" name="first_name" value="<?= e($v['first_name']) ?>" required></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="middle_name">Отчество</label><input type="text" id="middle_name" name="middle_name" value="<?= e($v['middle_name']) ?>"></div>
+        <div class="field"><label for="birth_date">Дата рождения</label><input type="date" id="birth_date" name="birth_date" value="<?= e($v['birth_date'] ?? '') ?>"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="email">Электронная почта</label><input type="email" id="email" name="email" value="<?= e($v['email']) ?>" required></div>
+        <div class="field"><label for="phone">Телефон</label><input type="tel" id="phone" name="phone" value="<?= e($v['phone']) ?>"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="vk">ВКонтакте</label><input type="text" id="vk" name="vk" value="<?= e($v['vk']) ?>"></div>
+        <div class="field"><label for="telegram">Telegram</label><input type="text" id="telegram" name="telegram" value="<?= e($v['telegram']) ?>"></div>
+      </div>
+      <div class="field"><label for="school">Школа, колледж или работа</label><input type="text" id="school" name="school" value="<?= e($v['school']) ?>"></div>
+      <div class="field"><label for="about">О себе</label><textarea id="about" name="about"><?= e($v['about']) ?></textarea></div>
+      <button type="submit" class="btn btn-primary">Сохранить данные</button>
+    </form>
   </div>
 </div>
 
