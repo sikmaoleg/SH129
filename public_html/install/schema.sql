@@ -256,6 +256,7 @@ INSERT IGNORE INTO `settings` (`key`,`value`) VALUES
 ('org_name','Молодая Гвардия · Щёлково'),
 ('org_email','info@example.ru'),
 ('org_address','Московская область, г. Щёлково'),
+('org_map_coords',''),
 ('org_vk',''),
 ('org_tg',''),
 ('points_per_hour','10'),

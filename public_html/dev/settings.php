@@ -12,6 +12,7 @@ $editable = [
     'org_leader_phone'   => ['Телефон руководителя', 'text'],
     'org_email'          => ['Электронная почта', 'text'],
     'org_address'        => ['Адрес', 'text'],
+    'org_map_coords'     => ['Координаты офиса на карте (широта,долгота)', 'text'],
     'org_vk'             => ['Ссылка на ВКонтакте', 'text'],
     'org_tg'             => ['Ссылка на Telegram', 'text'],
     'registration_open'  => ['Приём заявок открыт (1 — да, 0 — нет)', 'text'],

@@ -28,6 +28,22 @@
         </div>
       </div>
     </div>
+    <?php
+      $mapCoords = array_map('trim', explode(',', setting('org_map_coords')));
+      $mapLat = $mapCoords[0] ?? '';
+      $mapLon = $mapCoords[1] ?? '';
+    ?>
+    <?php if (is_numeric($mapLat) && is_numeric($mapLon)): ?>
+      <div class="footer-map">
+        <iframe
+          src="https://yandex.ru/map-widget/v1/?ll=<?= e($mapLon) ?>%2C<?= e($mapLat) ?>&z=16&pt=<?= e($mapLon) ?>,<?= e($mapLat) ?>,pm2rdm"
+          title="Офис на карте — <?= e(setting('org_address', 'Молодая Гвардия Щёлково')) ?>"
+          loading="lazy" allowfullscreen></iframe>
+        <a class="footer-map-link" href="https://yandex.ru/maps/?pt=<?= e($mapLon) ?>,<?= e($mapLat) ?>&z=16&l=map" target="_blank" rel="noopener">
+          <?= icon('map-pin') ?>Открыть на Яндекс.Картах
+        </a>
+      </div>
+    <?php endif; ?>
     <div class="footer-bottom">
       <span>© <?= date('Y') ?> «Молодая Гвардия Единой России» · Щёлково</span>
       <div class="socials">
