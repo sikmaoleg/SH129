@@ -168,7 +168,7 @@ function shareButtons(string $pageUrl, string $title): string
     $tg = "https://t.me/share/url?url={$u}&text={$t}";
     return '<div class="share-row">'
         . '<span class="share-label">Поделиться:</span>'
-        . '<a href="' . e($vk) . '" target="_blank" rel="noopener" class="share-btn" aria-label="ВКонтакте">' . icon('users') . '</a>'
+        . '<a href="' . e($vk) . '" target="_blank" rel="noopener" class="share-btn" aria-label="ВКонтакте">' . icon('vk') . '</a>'
         . '<a href="' . e($tg) . '" target="_blank" rel="noopener" class="share-btn" aria-label="Telegram">' . icon('telegram') . '</a>'
         . '<button type="button" class="share-btn" data-copy-link="' . e($pageUrl) . '" aria-label="Скопировать ссылку">' . icon('link') . '</button>'
         . '</div>';
@@ -403,6 +403,89 @@ function plural(int $n, string $one, string $few, string $many): string
     if ($n1 > 1 && $n1 < 5)  return $few;
     if ($n1 === 1)           return $one;
     return $many;
+}
+
+// ---------------------------------------------------------------------
+// Тексты новостей (посты из Telegram приходят с эмодзи и хэштегами)
+// ---------------------------------------------------------------------
+/** Убирает эмодзи, тире и пробелы по краям строки. Внутри строки текст не трогаем. */
+function trimDecor(string $s): string
+{
+    $s = preg_replace('/^[\p{So}\p{Sk}\p{Cf}\p{Mn}\p{Me}\p{Pd}\p{Zs}\s]+/u', '', $s) ?? $s;
+    $s = preg_replace('/[\p{So}\p{Sk}\p{Cf}\p{Mn}\p{Me}\p{Zs}\s]+$/u', '', $s) ?? $s;
+    return trim($s);
+}
+
+/**
+ * Заголовок новости для показа. Если в заголовке нет ни одной буквы
+ * (например, «❗️❗️❗️»), берётся первая содержательная строка текста.
+ */
+function cleanNewsTitle(string $title, string $body = ''): string
+{
+    $t = trimDecor($title);
+    if (preg_match('/\p{L}/u', $t)) {
+        return $t;
+    }
+    foreach (preg_split('/\R/u', $body) ?: [] as $line) {
+        $line = trimDecor($line);
+        if (preg_match('/\p{L}.*\p{L}/u', $line)) {
+            if (mb_strlen($line) > 110) {
+                $cut  = mb_substr($line, 0, 110);
+                $line = rtrim(mb_substr($cut, 0, mb_strrpos($cut, ' ') ?: 110), ' ,.;:') . '…';
+            }
+            return $line;
+        }
+    }
+    return $t !== '' ? $t : 'Новость';
+}
+
+/**
+ * Разбирает текст новости: абзацы без повтора заголовка и без строк из одних
+ * хэштегов, плюс сами хэштеги отдельным списком.
+ */
+function newsBodyParts(string $body, string $title = ''): array
+{
+    $paras = [];
+    $tags  = [];
+    $titleKey = mb_strtolower(cleanNewsTitle($title, $body));
+    foreach (preg_split('/\R{2,}/u', trim($body)) ?: [] as $para) {
+        $lines = [];
+        foreach (preg_split('/\R/u', $para) ?: [] as $line) {
+            if (preg_match('/^\s*(#[\p{L}\p{N}_]+\s*)+$/u', $line)) {
+                preg_match_all('/#([\p{L}\p{N}_]+)/u', $line, $m);
+                $tags = array_merge($tags, $m[1]);
+                continue;
+            }
+            $lines[] = rtrim($line);
+        }
+        $text = trim(implode("\n", $lines));
+        // Абзац из одних эмодзи или знаков — просто украшение
+        if (!preg_match('/[\p{L}\p{N}]/u', $text)) {
+            continue;
+        }
+        // Первая строка поста обычно и есть заголовок — не повторяем её в тексте
+        if (!$paras && $titleKey !== '') {
+            $first = preg_split('/\R/u', $text)[0];
+            if (mb_strtolower(trimDecor($first)) === $titleKey) {
+                $text = trim(mb_substr($text, mb_strlen($first)));
+                if (!preg_match('/[\p{L}\p{N}]/u', $text)) {
+                    continue;
+                }
+            }
+        }
+        $paras[] = $text;
+    }
+    return ['paras' => $paras, 'tags' => array_values(array_unique($tags))];
+}
+
+/** Короткий анонс новости для карточек: без заголовка, хэштегов и лишних пробелов. */
+function newsExcerpt(array $n, int $len = 160): string
+{
+    $source = (string)($n['body'] ?? '') !== '' ? (string)$n['body'] : (string)($n['excerpt'] ?? '');
+    $parts  = newsBodyParts($source, (string)($n['title'] ?? ''));
+    $text   = preg_replace('/\s+/u', ' ', implode(' ', $parts['paras'])) ?? '';
+    $text   = trimDecor($text);
+    return mb_strimwidth($text, 0, $len, '…');
 }
 
 // ---------------------------------------------------------------------

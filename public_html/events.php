@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/bootstrap.php';
 requireLogin();
-$pageTitle = 'Мероприятия — Молодая Гвардия Щёлково';
+$pageTitle = 'Мероприятия: Молодая Гвардия Щёлково';
 $activeNav = 'events';
 
 $view = ($_GET['view'] ?? 'list') === 'calendar' ? 'calendar' : 'list';
@@ -57,55 +57,49 @@ if ($view === 'list') {
     );
 }
 require __DIR__ . '/includes/header.php';
+$filter = $filter ?? 'upcoming';
 ?>
-<div class="page-head">
-  <div class="container">
-    <div class="breadcrumbs"><a href="<?= url('index.php') ?>">Главная</a> / Мероприятия</div>
-    <h1>Мероприятия отделения</h1>
+<header class="phead">
+  <div class="wrap">
+    <nav class="crumbs" aria-label="Навигация"><a href="<?= url('index.php') ?>">Главная</a><span>/</span><span>Мероприятия</span></nav>
+    <h1 class="phead-title display">Мероприятия</h1>
+    <p class="phead-lead">Афиша отделения. Записаться можно на&nbsp;странице мероприятия.</p>
   </div>
-</div>
+</header>
 
-<section class="section">
-  <div class="container">
-    <div class="section-head">
-      <div>
-        <h2><?= $view === 'calendar' ? 'Календарь мероприятий' : (($filter ?? 'upcoming') === 'past' ? 'Прошедшие' : 'Ближайшие') . ' мероприятия' ?></h2>
-        <p>Записаться может волонтёр отделения из личного кабинета.</p>
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <?php if ($view === 'list'): ?>
-          <a href="<?= url('events.php') ?>" class="btn btn-sm <?= ($filter ?? 'upcoming') !== 'past' ? 'btn-primary' : 'btn-outline' ?>">Ближайшие</a>
-          <a href="<?= url('events.php?filter=past') ?>" class="btn btn-sm <?= ($filter ?? '') === 'past' ? 'btn-primary' : 'btn-outline' ?>">Прошедшие</a>
-        <?php endif; ?>
-        <a href="<?= url('events.php') ?>" class="btn btn-sm <?= $view === 'list' ? 'btn-primary' : 'btn-outline' ?>"><?= icon('clipboard') ?>Список</a>
-        <a href="<?= url('events.php?view=calendar') ?>" class="btn btn-sm <?= $view === 'calendar' ? 'btn-primary' : 'btn-outline' ?>"><?= icon('calendar') ?>Календарь</a>
+<section class="sec">
+  <div class="wrap">
+    <div class="toolbar-row">
+      <?php if ($view === 'list'): ?>
+        <div class="seg" aria-label="Период">
+          <a href="<?= url('events.php') ?>" class="<?= $filter !== 'past' ? 'on' : '' ?>">Ближайшие</a>
+          <a href="<?= url('events.php?filter=past') ?>" class="<?= $filter === 'past' ? 'on' : '' ?>">Прошедшие</a>
+        </div>
+      <?php endif; ?>
+      <div class="seg" aria-label="Вид">
+        <a href="<?= url('events.php') ?>" class="<?= $view === 'list' ? 'on' : '' ?>"><?= icon('list-checks') ?>Список</a>
+        <a href="<?= url('events.php?view=calendar') ?>" class="<?= $view === 'calendar' ? 'on' : '' ?>"><?= icon('calendar') ?>Календарь</a>
       </div>
     </div>
 
     <?php if ($view === 'calendar'): ?>
-
       <div class="cal-nav">
-        <a href="<?= url('events.php?view=calendar&month=' . $prevMonth) ?>" class="btn btn-outline btn-sm"><?= icon('arrow-right', 'icon icon-flip') ?>Раньше</a>
-        <h3><?= e(mb_convert_case(RU_MONTHS[(int)$monthStart->format('n')], MB_CASE_TITLE, 'UTF-8')) ?> <?= e($monthStart->format('Y')) ?></h3>
+        <a href="<?= url('events.php?view=calendar&month=' . $prevMonth) ?>" class="btn btn-outline btn-sm"><?= icon('arrow-left') ?>Раньше</a>
+        <h2 class="display"><?= e(['', 'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'][(int)$monthStart->format('n')]) ?> <?= e($monthStart->format('Y')) ?></h2>
         <a href="<?= url('events.php?view=calendar&month=' . $nextMonth) ?>" class="btn btn-outline btn-sm">Позже<?= icon('arrow-right') ?></a>
       </div>
-
       <div class="cal-grid">
         <?php foreach (['Пн','Вт','Ср','Чт','Пт','Сб','Вс'] as $wd): ?>
           <div class="cal-weekday"><?= $wd ?></div>
         <?php endforeach; ?>
-
         <?php for ($i = 1; $i < $firstWeekday; $i++): ?>
           <div class="cal-cell cal-cell-empty"></div>
         <?php endfor; ?>
-
         <?php for ($d = 1; $d <= $daysInMonth; $d++): $dayEvents = $byDay[$d] ?? []; $isToday = $d === $todayDay; ?>
           <div class="cal-cell <?= $isToday ? 'is-today' : '' ?> <?= $dayEvents ? 'has-events' : '' ?>">
             <span class="cal-daynum"><?= $d ?></span>
             <?php foreach (array_slice($dayEvents, 0, 3) as $ev): ?>
-              <a href="<?= url('event.php?id=' . (int)$ev['id']) ?>" class="cal-chip <?= $ev['status'] === 'finished' ? 'is-past' : '' ?>">
-                <?= e(mb_strimwidth($ev['title'], 0, 22, '…')) ?>
-              </a>
+              <a href="<?= url('event.php?id=' . (int)$ev['id']) ?>" class="cal-chip <?= $ev['status'] === 'finished' ? 'is-past' : '' ?>" title="<?= e($ev['title']) ?>"><?= e($ev['title']) ?></a>
             <?php endforeach; ?>
             <?php if (count($dayEvents) > 3): ?>
               <span class="cal-more">+<?= count($dayEvents) - 3 ?> ещё</span>
@@ -113,32 +107,26 @@ require __DIR__ . '/includes/header.php';
           </div>
         <?php endfor; ?>
       </div>
-
     <?php elseif ($events): ?>
-      <div class="event-list">
+      <div class="agenda">
         <?php foreach ($events as $ev): $ts = strtotime($ev['starts_at']); ?>
-          <div class="event-row">
-            <div class="event-date">
-              <b><?= date('j', $ts) ?></b>
-              <span><?= RU_MONTHS_SHORT[(int)date('n', $ts)] ?></span>
-            </div>
-            <div class="event-info">
-              <h3><?= e($ev['title']) ?></h3>
-              <div class="event-meta">
+          <article class="ev">
+            <div class="ev-date"><b><?= date('j', $ts) ?></b><span><?= mb_strtolower(RU_MONTHS_SHORT[(int)date('n', $ts)]) ?></span></div>
+            <div>
+              <h3><a href="<?= url('event.php?id=' . (int)$ev['id']) ?>"><?= e($ev['title']) ?></a></h3>
+              <div class="ev-meta">
                 <span><?= icon('clock') ?><?= date('H:i', $ts) ?></span>
                 <?php if ($ev['location']): ?><span><?= icon('map-pin') ?><?= e($ev['location']) ?></span><?php endif; ?>
                 <?php if ($ev['direction_title']): ?><span><?= icon('target') ?><?= e($ev['direction_title']) ?></span><?php endif; ?>
-                <?php if ((int)$ev['capacity'] > 0): ?><span><?= icon('users') ?><?= max(0, (int)$ev['capacity'] - (int)$ev['taken']) ?> из <?= (int)$ev['capacity'] ?></span><?php endif; ?>
+                <?php if ((int)$ev['capacity'] > 0): ?><span><?= icon('users') ?>свободно <?= max(0, (int)$ev['capacity'] - (int)$ev['taken']) ?> из <?= (int)$ev['capacity'] ?></span><?php endif; ?>
               </div>
             </div>
-            <div class="event-actions">
-              <a href="<?= url('event.php?id='.(int)$ev['id']) ?>" class="btn btn-outline btn-sm">Подробнее</a>
-            </div>
-          </div>
+            <a href="<?= url('event.php?id=' . (int)$ev['id']) ?>" class="btn btn-outline btn-sm">Подробнее<?= icon('arrow-right') ?></a>
+          </article>
         <?php endforeach; ?>
       </div>
     <?php else: ?>
-      <div class="empty"><b>Мероприятий нет</b><?= ($filter ?? '') === 'past' ? 'Здесь появится история проведённых мероприятий.' : 'Афиша пока пуста — загляните позже.' ?></div>
+      <div class="empty"><b>Мероприятий нет</b><?= $filter === 'past' ? 'Здесь появится история проведённых мероприятий.' : 'Афиша пока пуста, загляни позже.' ?></div>
     <?php endif; ?>
   </div>
 </section>

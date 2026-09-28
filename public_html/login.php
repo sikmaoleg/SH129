@@ -5,7 +5,7 @@ if (isLoggedIn()) {
     redirect(homeForRole(userRole()));
 }
 
-$pageTitle = 'Вход — Молодая Гвардия Щёлково';
+$pageTitle = 'Вход: Молодая Гвардия Щёлково';
 $activeNav = '';
 $error = '';
 $email = '';
@@ -31,41 +31,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 require __DIR__ . '/includes/header.php';
 ?>
-
-<div class="page-head">
-  <div class="container">
-    <div class="breadcrumbs"><a href="<?= url('index.php') ?>">Главная</a> / Вход</div>
-    <h1>Вход в личный кабинет</h1>
-  </div>
-</div>
-
-<section class="section">
-  <div class="container">
-    <div class="form-card form-narrow">
-      <h1>Здравствуйте</h1>
-      <p class="form-intro">Введите почту и пароль, указанные при регистрации.</p>
-
+<section class="sec form-page">
+  <div class="wrap login">
+    <nav class="crumbs" aria-label="Навигация"><a href="<?= url('index.php') ?>">Главная</a><span>/</span><span>Вход</span></nav>
+    <h1 class="phead-title display">Вход</h1>
+    <p class="phead-lead">Личный кабинет волонтёра, панель администратора и&nbsp;разработчика.</p>
+    <form class="vform login-form" method="post" novalidate data-validate>
+      <?= csrfField() ?>
       <?php if ($error): ?>
-        <div class="alert alert-error"><?= e($error) ?></div>
+        <div class="alert alert-error" role="alert"><?= e($error) ?></div>
       <?php endif; ?>
-
-      <form method="post" novalidate>
-        <?= csrfField() ?>
-        <div class="field">
-          <label for="email">Электронная почта</label>
-          <input type="email" id="email" name="email" value="<?= e($email) ?>" required autofocus
-                 inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false">
-        </div>
-        <div class="field">
-          <label for="password">Пароль</label>
-          <input type="password" id="password" name="password" required autocomplete="current-password">
-        </div>
-        <button type="submit" class="btn btn-primary btn-block">Войти</button>
-      </form>
-
-      <p class="form-foot">Ещё не в организации? <a href="<?= url('register.php') ?>">Подать заявку</a></p>
-    </div>
+      <div class="field">
+        <label for="email">Электронная почта</label>
+        <input type="email" id="email" name="email" value="<?= e($email) ?>" required autofocus
+               inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false">
+        <p class="err">Укажи почту</p>
+      </div>
+      <div class="field">
+        <label for="password">Пароль</label>
+        <input type="password" id="password" name="password" required autocomplete="current-password">
+        <p class="err">Укажи пароль</p>
+      </div>
+      <button type="submit" class="btn btn-accent btn-lg btn-block">Войти<?= icon('arrow-right') ?></button>
+      <?php if (setting('registration_open', '1') === '1'): ?>
+        <p class="form-foot">Ещё не с&nbsp;нами? <a href="<?= url('register.php') ?>">Заполнить анкету</a></p>
+      <?php endif; ?>
+    </form>
   </div>
 </section>
-
 <?php require __DIR__ . '/includes/footer.php'; ?>

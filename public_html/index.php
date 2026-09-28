@@ -1,27 +1,17 @@
 <?php
 require_once __DIR__ . '/includes/bootstrap.php';
 
-$pageTitle = 'Молодая Гвардия · Щёлково — волонтёрская организация округа';
+$pageTitle = 'Молодая Гвардия Щёлково';
 $activeNav = '';
+$navCta    = 'home';
 
-// Фото слайдера — управляются администратором в admin/hero.php
+// Фото первого экрана — управляются администратором в admin/hero.php
 $heroPhotos = fetchAll('SELECT image, caption FROM hero_slides ORDER BY sort ASC, id ASC');
-
-$news = fetchAll(
-    "SELECT id, title, excerpt, cover, published_at
-     FROM news WHERE status = 'published' AND published_at <= NOW()
-     ORDER BY published_at DESC LIMIT 3"
-);
-
-$events = fetchAll(
-    "SELECT e.*, d.title AS direction_title,
-            (SELECT COUNT(*) FROM event_registrations r
-              WHERE r.event_id = e.id AND r.status <> 'cancelled') AS taken
-     FROM events e
-     LEFT JOIN directions d ON d.id = e.direction_id
-     WHERE e.status = 'published' AND e.starts_at >= NOW()
-     ORDER BY e.starts_at ASC LIMIT 4"
-);
+if (!$heroPhotos) {
+    $heroPhotos = [['image' => 'assets/img/team.webp', 'caption' => 'Команда отделения']];
+}
+// Одна из фотографий уходит в блок «Часть большой команды»
+$orgPhoto = $heroPhotos[count($heroPhotos) > 3 ? 3 : 0];
 
 // Показатели: если администратор не заполнил их вручную — считаем по базе
 $statVolunteers = (int)setting('stat_volunteers');
@@ -37,216 +27,257 @@ if ($statHours <= 0) {
     $statHours = (int)fetchValue('SELECT COALESCE(SUM(hours),0) FROM users');
 }
 
+// Направления работы: подпись в свёрнутой полосе, иконка и фото по slug
+$dirMeta = [
+    'patriot' => ['Патриотика', 'flag-banner', 'assets/img/march.webp', '40% 50%'],
+    'help'    => ['Помощь', 'hand-heart', 'assets/img/dir-help.webp', '52% 50%'],
+    'eco'     => ['Экология', 'plant', 'assets/img/rain.webp', '50% 50%'],
+    'media'   => ['Медиа', 'camera', 'assets/img/creative.webp', '50% 50%'],
+    'sport'   => ['Спорт', 'sneaker', 'assets/img/dir-sport.webp', '40% 50%'],
+    'school'  => ['Лидерство', 'graduation-cap', 'assets/img/dir-school.webp', '60% 40%'],
+];
+$directions = fetchAll('SELECT title, slug, description FROM directions ORDER BY sort ASC, id ASC');
+
+$news = fetchAll(
+    "SELECT id, title, excerpt, body, cover, published_at
+     FROM news WHERE status = 'published' AND published_at <= NOW()
+     ORDER BY published_at DESC LIMIT 6"
+);
+
+$team = fetchAll(
+    "SELECT id, last_name, first_name, position, avatar FROM users
+     WHERE status = 'approved' AND position IN ('leader','local_staff')
+     ORDER BY FIELD(position, 'leader', 'local_staff'), (avatar IS NULL), last_name ASC LIMIT 7"
+);
+
 $honorId = (int)setting('honor_user_id');
 $honor   = $honorId > 0 ? fetchOne("SELECT * FROM users WHERE id = ? AND status = 'approved'", [$honorId]) : null;
+$registrationOpen = setting('registration_open', '1') === '1';
 
 require __DIR__ . '/includes/header.php';
 ?>
 
+<!-- Первый экран -->
 <section class="hero">
-  <div class="container">
-    <div class="hero-body">
-      <span class="hero-tag"><?= icon('map-pin') ?>Щёлковский городской округ</span>
-      <h1>Волонтёрская организация «Молодая Гвардия»</h1>
-      <p>Местное отделение объединяет молодёжь округа для добровольческой работы: помощь жителям, экологические и патриотические проекты, спортивные и городские мероприятия.</p>
-      <div class="hero-actions">
-        <a href="<?= url('register.php') ?>" class="btn btn-accent"><?= icon('arrow-right') ?>Стать волонтёром</a>
-        <a href="<?= url('events.php') ?>" class="btn btn-ghost">Ближайшие мероприятия</a>
-      </div>
-      <div class="hero-stats">
-        <div class="stat"><?= icon('users') ?><b><?= number_format($statVolunteers, 0, '.', ' ') ?>+</b><span><?= plural($statVolunteers, 'волонтёр', 'волонтёра', 'волонтёров') ?></span></div>
-        <div class="stat"><?= icon('calendar') ?><b><?= number_format($statEvents, 0, '.', ' ') ?></b><span><?= plural($statEvents, 'мероприятие', 'мероприятия', 'мероприятий') ?> в 2026 году</span></div>
-        <div class="stat"><?= icon('clock') ?><b><?= number_format($statHours, 0, '.', ' ') ?>+</b><span><?= plural($statHours, 'час', 'часа', 'часов') ?> добровольчества</span></div>
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow hero-fade d1">Люди. Идеи. Дела.</p>
+      <h1 class="hero-title display" aria-label="Щёлково делаем мы">
+        <span class="line" aria-hidden="true"><span>Щёлково</span></span>
+        <span class="line" aria-hidden="true"><span>делаем <em class="stamp">мы</em></span></span>
+      </h1>
+      <p class="hero-sub hero-fade d2">Местное отделение «Молодой Гвардии Единой России». Объединяем молодёжь округа, которой не&nbsp;всё равно, какими будут страна и&nbsp;родной город.</p>
+      <div class="hero-ctas hero-fade d3">
+        <?php if ($me): ?>
+          <a class="btn btn-accent btn-lg" href="<?= url(homeForRole($me['role'])) ?>" id="heroCta">Личный кабинет<?= icon('arrow-right') ?></a>
+        <?php elseif ($registrationOpen): ?>
+          <a class="btn btn-accent btn-lg" href="<?= url('register.php') ?>" id="heroCta">Стать волонтёром<?= icon('arrow-right') ?></a>
+        <?php else: ?>
+          <a class="btn btn-accent btn-lg" href="<?= url('contacts.php') ?>" id="heroCta">Связаться с нами<?= icon('arrow-right') ?></a>
+        <?php endif; ?>
+        <a class="link-arrow" href="#creed">Во что мы верим<?= icon('arrow-up-right') ?></a>
       </div>
     </div>
-    <?php if ($heroPhotos): ?>
-    <div class="hero-visual">
-      <div class="hero-visual-card hero-slider" id="heroSlider">
+    <div class="hero-media">
+      <div class="frame-shadow"></div>
+      <div class="frame" id="heroFrame">
         <?php foreach ($heroPhotos as $i => $slide): ?>
-          <div class="hero-slide <?= $i === 0 ? 'is-active' : '' ?>">
-            <img src="<?= url($slide['image']) ?>" alt="<?= e($slide['caption'] ?? '') ?>" <?= $i === 0 ? '' : 'loading="lazy"' ?>>
-          </div>
+          <img class="<?= $i === 0 ? 'is-on' : '' ?>" src="<?= url($slide['image']) ?>" alt="<?= e($slide['caption'] ?? '') ?>" <?= $i === 0 ? 'fetchpriority="high"' : 'loading="lazy"' ?>>
         <?php endforeach; ?>
-        <div class="hero-slider-dots">
-          <?php foreach ($heroPhotos as $i => $slide): ?>
-            <button type="button" class="<?= $i === 0 ? 'is-active' : '' ?>" data-slide="<?= $i ?>" aria-label="Фото: <?= e($slide['caption'] ?? '') ?>"></button>
-          <?php endforeach; ?>
-        </div>
       </div>
     </div>
-    <?php endif; ?>
   </div>
 </section>
 
+<!-- Цифры -->
+<section class="numbers" aria-label="Отделение в цифрах">
+  <div class="wrap">
+    <div class="numbers-row" data-reveal>
+      <div class="num"><b class="display" data-count="<?= $statVolunteers ?>"><?= number_format($statVolunteers, 0, '.', ' ') ?><span class="plus">+</span></b><span class="num-label"><?= plural($statVolunteers, 'волонтёр', 'волонтёра', 'волонтёров') ?> в&nbsp;отделении</span></div>
+      <div class="num"><b class="display" data-count="<?= $statEvents ?>"><?= number_format($statEvents, 0, '.', ' ') ?></b><span class="num-label"><?= plural($statEvents, 'мероприятие', 'мероприятия', 'мероприятий') ?> в&nbsp;<?= date('Y') ?>&nbsp;году</span></div>
+      <div class="num"><b class="display" data-count="<?= $statHours ?>"><?= number_format($statHours, 0, '.', ' ') ?><span class="plus">+</span></b><span class="num-label"><?= plural($statHours, 'час', 'часа', 'часов') ?> добровольчества</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- Лента -->
+<div class="band" aria-hidden="true">
+  <div class="band-track">
+    <?php for ($k = 0; $k < 2; $k++): ?>
+      <div class="band-group">
+        <span>Люди</span><?= icon('star-four') ?>
+        <span>Идеи</span><?= icon('star-four') ?>
+        <span>Дела</span><?= icon('star-four') ?>
+        <span>Молодая Гвардия Щёлково</span><?= icon('star-four') ?>
+      </div>
+    <?php endfor; ?>
+  </div>
+</div>
+
+<!-- Во что мы верим -->
+<section class="creed" id="creed">
+  <div class="wrap">
+    <h2 class="h2 display" data-reveal>Во что мы верим</h2>
+    <div class="creed-list">
+      <article class="creed-row" style="--i:0" data-reveal>
+        <h3 class="creed-word display">Люди<span>.</span></h3>
+        <p>Молодёжь Щёлковского округа от&nbsp;14&nbsp;лет: школьники, студенты, работающие ребята. Нас объединяет не&nbsp;возраст, а&nbsp;желание участвовать в&nbsp;жизни своего города.</p>
+      </article>
+      <article class="creed-row" style="--i:1" data-reveal>
+        <h3 class="creed-word display">Идеи<span>.</span></h3>
+        <p>Любовь к&nbsp;своей стране и&nbsp;уважение к&nbsp;её истории. Память о&nbsp;подвиге предков, забота о&nbsp;старшем поколении, ответственность за&nbsp;место, где живёшь.</p>
+      </article>
+      <article class="creed-row" style="--i:2" data-reveal>
+        <h3 class="creed-word display">Дела<span>.</span></h3>
+        <p>Идеи ничего не&nbsp;стоят без поступков. Поэтому мы выходим на&nbsp;шествия и&nbsp;памятные акции, помогаем жителям, участвуем в&nbsp;благоустройстве и&nbsp;устраиваем праздники для&nbsp;округа.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- О Молодой Гвардии -->
+<section class="org">
+  <div class="wrap org-grid">
+    <div class="org-media" data-reveal>
+      <div class="frame-shadow"></div>
+      <div class="frame"><img class="is-static" src="<?= url($orgPhoto['image']) ?>" alt="<?= e($orgPhoto['caption'] ?? 'Команда отделения') ?>" loading="lazy"></div>
+    </div>
+    <div class="org-copy" data-reveal>
+      <h2 class="h2 display">Часть большой команды</h2>
+      <div class="org-year"><b class="display">2005</b><span>год основания «Молодой Гвардии Единой России»</span></div>
+      <p>Организация создана 16&nbsp;ноября 2005&nbsp;года в&nbsp;Воронеже. Сегодня это всероссийское молодёжное движение с&nbsp;отделениями в&nbsp;большинстве регионов страны.</p>
+      <p>Наше местное отделение работает в&nbsp;Щёлковском городском округе: проводит патриотические и&nbsp;городские проекты, помогает жителям и&nbsp;зовёт в&nbsp;команду всех, кому не&nbsp;всё равно.</p>
+      <a class="link-arrow" href="<?= url('about.php') ?>">Подробнее об&nbsp;организации<?= icon('arrow-up-right') ?></a>
+    </div>
+  </div>
+</section>
+
+<?php if ($directions): ?>
+<!-- Направления -->
+<section class="dirs" id="dirs">
+  <div class="wrap">
+    <div data-reveal>
+      <h2 class="h2 display">Чем мы занимаемся</h2>
+      <p class="lead"><?= count($directions) ?> <?= plural(count($directions), 'направление', 'направления', 'направлений') ?> работы отделения. В&nbsp;каждом есть место и&nbsp;новичку, и&nbsp;тому, кто готов вести за&nbsp;собой.</p>
+    </div>
+    <div class="dir-strip" data-reveal>
+      <?php foreach ($directions as $i => $d):
+        $meta = $dirMeta[$d['slug']] ?? [explode(' ', $d['title'])[0], 'star-four', 'assets/img/team.webp', '50% 50%']; ?>
+        <article class="dir <?= $i === 0 ? 'is-open' : '' ?>" tabindex="0" aria-expanded="<?= $i === 0 ? 'true' : 'false' ?>">
+          <img src="<?= url($meta[2]) ?>" alt="" loading="lazy" style="object-position:<?= e($meta[3]) ?>">
+          <span class="tint"></span>
+          <span class="dir-ico"><?= icon($meta[1]) ?></span>
+          <div class="dir-body">
+            <span class="dir-short" aria-hidden="true"><?= e($meta[0]) ?></span>
+            <div class="dir-full"><h3 class="display"><?= e($d['title']) ?></h3><?php if ($d['description']): ?><p><?= e($d['description']) ?>.</p><?php endif; ?></div>
+          </div>
+        </article>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</section>
+<?php endif; ?>
+
+<?php if ($news): ?>
+<!-- Новости -->
+<section class="news" id="news">
+  <div class="wrap">
+    <div class="sec-head" data-reveal>
+      <h2 class="h2 display">Новости</h2>
+      <div class="sec-tools">
+        <a class="link-arrow" href="<?= url('news.php') ?>">Все новости<?= icon('arrow-up-right') ?></a>
+        <button class="sq-btn" type="button" data-rail="-1" aria-label="Предыдущие новости"><?= icon('arrow-left') ?></button>
+        <button class="sq-btn" type="button" data-rail="1" aria-label="Следующие новости"><?= icon('arrow-right') ?></button>
+      </div>
+    </div>
+  </div>
+  <div class="news-rail" id="newsRail" tabindex="0" aria-label="Лента новостей" data-reveal>
+    <?php foreach ($news as $i => $n): $title = cleanNewsTitle($n['title'], (string)$n['body']); ?>
+      <article class="n-card <?= $i === 0 ? 'n-lead' : '' ?>">
+        <a href="<?= url('news-item.php?id=' . (int)$n['id']) ?>">
+          <div class="n-img"><img src="<?= e($n['cover'] ? url('uploads/news/' . $n['cover']) : url('assets/img/march.webp')) ?>" alt="" loading="lazy"></div>
+          <time datetime="<?= e(substr($n['published_at'], 0, 10)) ?>"><?= e(ruDate($n['published_at'])) ?></time>
+          <h3><?= e($title) ?></h3>
+          <?php if ($i === 0): ?><p><?= e(newsExcerpt($n, 190)) ?></p><?php endif; ?>
+        </a>
+      </article>
+    <?php endforeach; ?>
+    <span class="n-end" aria-hidden="true"></span>
+  </div>
+</section>
+<?php endif; ?>
+
 <?php if ($honor): ?>
-<!-- ---------- Доска почёта ---------- -->
-<section class="section" style="padding-top:0;">
-  <div class="container">
-    <div class="honor-card">
-      <div class="honor-avatar">
+<!-- Волонтёр месяца -->
+<section class="honor">
+  <div class="wrap">
+    <div class="honor-card" data-reveal>
+      <div class="honor-ava">
         <?php if ($honor['avatar']): ?>
           <img src="<?= url('uploads/avatars/' . $honor['avatar']) ?>" alt="">
         <?php else: ?>
           <span><?= e(mb_substr($honor['first_name'], 0, 1) . mb_substr($honor['last_name'], 0, 1)) ?></span>
         <?php endif; ?>
       </div>
-      <div class="honor-body">
-        <span class="honor-eyebrow"><?= icon('medal') ?>Волонтёр месяца</span>
-        <h3><?= e($honor['last_name'] . ' ' . $honor['first_name']) ?></h3>
-        <?php if (setting('honor_note')): ?><p><?= e(setting('honor_note')) ?></p><?php endif; ?>
+      <div>
+        <p class="kicker"><?= icon('crown') ?>Волонтёр месяца</p>
+        <h2 class="display"><?= e($honor['first_name'] . ' ' . $honor['last_name']) ?></h2>
+        <?php if (setting('honor_note')): ?><p class="note"><?= e(setting('honor_note')) ?></p><?php endif; ?>
       </div>
-      <a href="<?= url('team.php') ?>" class="btn btn-outline btn-sm">Вся команда →</a>
+      <a class="btn btn-outline" href="<?= url('team.php') ?>">Вся команда<?= icon('arrow-right') ?></a>
     </div>
   </div>
 </section>
 <?php endif; ?>
 
-<!-- ---------- Новости ---------- -->
-<section class="section">
-  <div class="container">
-    <div class="section-head">
-      <div>
-        <span class="section-eyebrow">Что нового</span><h2>Новости отделения</h2>
-        <p>Чем живёт «Молодая Гвардия» Щёлково прямо сейчас.</p>
-      </div>
-      <a href="<?= url('news.php') ?>" class="section-link">Все новости →</a>
+<?php if ($team): ?>
+<!-- Команда -->
+<section class="team" id="team">
+  <div class="wrap">
+    <div class="sec-head" data-reveal>
+      <h2 class="h2 display">Штаб отделения</h2>
+      <a class="link-arrow" href="<?= url('team.php') ?>">Вся команда<?= icon('arrow-up-right') ?></a>
     </div>
-
-    <?php if ($news): ?>
-      <div class="news-grid">
-        <?php foreach ($news as $n): ?>
-          <article class="news-card">
-            <div class="news-card-img">
-              <img src="<?= e($n['cover'] ? url('uploads/news/' . $n['cover']) : url('assets/img/march.webp')) ?>" alt="" loading="lazy">
-            </div>
-            <div class="news-card-body">
-              <span class="news-date"><?= e(ruDate($n['published_at'])) ?></span>
-              <h3><a href="<?= url('news-item.php?id=' . (int)$n['id']) ?>"><?= e($n['title']) ?></a></h3>
-              <p><?= e(mb_strimwidth((string)$n['excerpt'], 0, 140, '…')) ?></p>
-            </div>
-          </article>
-        <?php endforeach; ?>
-      </div>
-    <?php else: ?>
-      <div class="empty">
-        <b>Новостей пока нет</b>
-        Первая публикация появится здесь сразу после того, как администратор добавит её в панели управления.
-      </div>
-    <?php endif; ?>
-  </div>
-</section>
-
-<!-- ---------- Афиша ---------- -->
-<section class="section section-alt">
-  <div class="container">
-    <div class="section-head">
-      <div>
-        <span class="section-eyebrow">Афиша</span><h2>Ближайшие мероприятия</h2>
-        <p>Запись открыта для волонтёров отделения. Не состоите в организации — подайте заявку, это займёт пару минут.</p>
-      </div>
-      <a href="<?= url('events.php') ?>" class="section-link">Вся афиша →</a>
-    </div>
-
-    <?php if ($events): ?>
-      <div class="event-list">
-        <?php foreach ($events as $ev): $ts = strtotime($ev['starts_at']); ?>
-          <div class="event-row">
-            <div class="event-date">
-              <b><?= date('j', $ts) ?></b>
-              <span><?= RU_MONTHS_SHORT[(int)date('n', $ts)] ?></span>
-            </div>
-            <div class="event-info">
-              <h3><?= e($ev['title']) ?></h3>
-              <div class="event-meta">
-                <span><?= icon('clock') ?><?= date('H:i', $ts) ?></span>
-                <?php if ($ev['location']): ?><span><?= icon('map-pin') ?><?= e($ev['location']) ?></span><?php endif; ?>
-                <?php if ($ev['direction_title']): ?><span><?= icon('target') ?><?= e($ev['direction_title']) ?></span><?php endif; ?>
-                <?php if ((int)$ev['capacity'] > 0): ?>
-                  <span><?= icon('users') ?><?= max(0, (int)$ev['capacity'] - (int)$ev['taken']) ?> из <?= (int)$ev['capacity'] ?></span>
-                <?php endif; ?>
-              </div>
-            </div>
-            <div class="event-actions">
-              <a href="<?= url('event.php?id=' . (int)$ev['id']) ?>" class="btn btn-outline btn-sm">Подробнее</a>
-            </div>
-          </div>
-        <?php endforeach; ?>
-      </div>
-    <?php else: ?>
-      <div class="empty">
-        <b>Афиша пока пуста</b>
-        Ближайшие мероприятия появятся здесь, как только их добавят в панели управления.
-      </div>
-    <?php endif; ?>
-  </div>
-</section>
-
-<!-- ---------- Галерея ---------- -->
-<section class="section section-alt">
-  <div class="container">
-    <div class="section-head">
-      <div>
-        <span class="section-eyebrow">Галерея</span><h2>Наша работа в кадре</h2>
-        <p>Фотографии с мероприятий отделения.</p>
-      </div>
-      <a href="<?= url('gallery.php') ?>" class="section-link">Вся галерея →</a>
-    </div>
-    <div class="gal-grid">
-      <figure class="gal-item gal-tall">
-        <img src="<?= url('assets/img/march.webp') ?>" alt="Городское шествие" loading="lazy">
-        <figcaption>Городское шествие</figcaption>
-      </figure>
-      <figure class="gal-item gal-wide">
-        <img src="<?= url('assets/img/cake.webp') ?>" alt="День рождения отделения" loading="lazy">
-        <figcaption>День рождения отделения</figcaption>
-      </figure>
-      <figure class="gal-item">
-        <img src="<?= url('assets/img/rink.webp') ?>" alt="Спортивное мероприятие" loading="lazy">
-        <figcaption>Спорт и ЗОЖ</figcaption>
-      </figure>
-      <figure class="gal-item">
-        <img src="<?= url('assets/img/rain.webp') ?>" alt="Работа в любую погоду" loading="lazy">
-        <figcaption>В любую погоду</figcaption>
-      </figure>
-      <figure class="gal-item gal-wide">
-        <img src="<?= url('assets/img/creative.webp') ?>" alt="Съёмка команды" loading="lazy">
-        <figcaption>МедиаГвардия</figcaption>
-      </figure>
+    <div class="team-grid" data-reveal>
+      <?php foreach ($team as $i => $m): $name = $m['first_name'] . ' ' . $m['last_name']; ?>
+        <figure class="t <?= $i === 0 && $m['position'] === 'leader' ? 't-lead' : '' ?>">
+          <?php if ($m['avatar']): ?>
+            <img src="<?= url('uploads/avatars/' . $m['avatar']) ?>" alt="<?= e($name) ?>" loading="lazy">
+          <?php else: ?>
+            <span class="initials" aria-hidden="true"><?= e(mb_substr($m['first_name'], 0, 1) . mb_substr($m['last_name'], 0, 1)) ?></span>
+          <?php endif; ?>
+          <figcaption><b><?= e($name) ?></b><span><?= e($m['position'] === 'leader' ? 'Руководитель местного отделения' : positionLabel($m['position'])) ?></span></figcaption>
+        </figure>
+      <?php endforeach; ?>
     </div>
   </div>
 </section>
+<?php endif; ?>
 
-<!-- ---------- Вступление ---------- -->
-<section class="join-band">
-  <div class="container">
-    <div>
-      <h2>Как попасть в команду Молодой Гвардии Щёлково</h2>
-      <p>Заявку может подать любой житель округа от 14 лет. После проверки анкеты администратор откроет доступ в личный кабинет, где будут ваши мероприятия и достижения.</p>
-      <a href="<?= url('register.php') ?>" class="btn btn-light">Подать заявку</a>
+<!-- Вступление -->
+<section class="join" id="join">
+  <div class="wrap join-grid">
+    <div class="join-copy">
+      <h2 class="join-title display" data-reveal>Твой ход</h2>
+      <p>Принимаем жителей Щёлковского округа от&nbsp;14&nbsp;лет. Опыт не&nbsp;нужен, достаточно желания участвовать.</p>
+      <?php if ($registrationOpen && !$me): ?>
+        <div class="join-ctas"><a class="btn btn-light btn-lg" href="<?= url('register.php') ?>">Стать волонтёром<?= icon('arrow-right') ?></a></div>
+      <?php endif; ?>
     </div>
-    <div class="join-steps">
-      <div class="join-step">
-        <b>01</b>
-        <div>
-          <h3>Заполните анкету</h3>
-          <p>Контакты и дата рождения.</p>
-        </div>
-      </div>
-      <div class="join-step">
-        <b>02</b>
-        <div>
-          <h3>Дождитесь одобрения</h3>
-          <p>Администратор проверит заявку и подтвердит вашу учётную запись.</p>
-        </div>
-      </div>
-      <div class="join-step">
-        <b>03</b>
-        <div>
-          <h3>Войдите в личный кабинет</h3>
-          <p>Записывайтесь на мероприятия и следите за своей активностью.</p>
-        </div>
-      </div>
-    </div>
+    <ul class="join-steps" data-reveal>
+      <li><b class="display">Приходи в&nbsp;штаб</b><span><?= e(setting('org_address', 'Щёлково')) ?></span></li>
+      <?php if (setting('org_leader_phone')): ?>
+        <li><b class="display">Звони руководителю</b><span><?= e(setting('org_leader_name')) ?><?= setting('org_leader_name') ? ', ' : '' ?><a href="tel:<?= e(preg_replace('/[^\d+]/', '', setting('org_leader_phone'))) ?>"><?= e(setting('org_leader_phone')) ?></a></span></li>
+      <?php endif; ?>
+      <li><b class="display">Пиши нам</b><span>
+        <?php $links = [];
+          if (setting('org_email')) { $links[] = '<a href="mailto:' . e(setting('org_email')) . '">' . e(setting('org_email')) . '</a>'; }
+          if (setting('org_vk')) { $links[] = '<a href="' . e(setting('org_vk')) . '" target="_blank" rel="noopener">ВКонтакте</a>'; }
+          if (setting('org_tg')) { $links[] = '<a href="' . e(setting('org_tg')) . '" target="_blank" rel="noopener">Telegram</a>'; }
+          $last = array_pop($links);
+          echo $links ? implode(', ', $links) . ' и&nbsp;' . $last : ($last ?? '<a href="' . url('contacts.php') . '">Контакты</a>'); ?>
+      </span></li>
+    </ul>
   </div>
 </section>
 

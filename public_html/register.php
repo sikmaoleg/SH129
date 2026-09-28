@@ -8,7 +8,8 @@ if (setting('registration_open', '1') !== '1') {
     $closed = true;
 }
 
-$pageTitle = 'Стать волонтёром — Молодая Гвардия Щёлково';
+$pageTitle = 'Стать волонтёром: Молодая Гвардия Щёлково';
+$navCta    = 'none';
 $activeNav = '';
 
 $errors = [];
@@ -95,134 +96,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($closed)) {
 }
 
 require __DIR__ . '/includes/header.php';
+
+/** Поле анкеты: подпись сверху, подсказка и текст ошибки снизу. */
+$field = function (string $name, string $label, array $opt = []) use ($old): string {
+    $req  = !empty($opt['required']);
+    $type = $opt['type'] ?? 'text';
+    $attrs = '';
+    foreach (($opt['attrs'] ?? []) as $k => $v) {
+        $attrs .= ' ' . $k . '="' . e($v) . '"';
+    }
+    $value = in_array($type, ['password'], true) ? '' : ' value="' . e($old[$name] ?? '') . '"';
+    return '<div class="field"><label for="' . $name . '">' . e($label) . ($req ? ' <i>*</i>' : '') . '</label>'
+         . '<input type="' . $type . '" id="' . $name . '" name="' . $name . '"' . $value . ($req ? ' required' : '') . $attrs . '>'
+         . (!empty($opt['hint']) ? '<p class="hint">' . e($opt['hint']) . '</p>' : '')
+         . (!empty($opt['err']) ? '<p class="err">' . e($opt['err']) . '</p>' : '')
+         . '</div>';
+};
 ?>
+<section class="sec form-page">
+  <div class="wrap form-grid">
+    <div class="form-side">
+      <nav class="crumbs" aria-label="Навигация"><a href="<?= url('index.php') ?>">Главная</a><span>/</span><span>Стать волонтёром</span></nav>
+      <h1 class="phead-title display">Анкета <em class="stamp">волонтёра</em></h1>
+      <p class="phead-lead">Принимаем жителей Щёлковского округа от&nbsp;14&nbsp;лет. Администратор отделения проверит анкету и&nbsp;свяжется с&nbsp;тобой.</p>
+      <p class="side-note"><?= icon('clock') ?>Заполнение займёт пару минут. Поля со&nbsp;звёздочкой обязательны.</p>
+    </div>
 
-<div class="page-head">
-  <div class="container">
-    <div class="breadcrumbs"><a href="<?= url('index.php') ?>">Главная</a> / Стать волонтёром</div>
-    <h1>Заявка на вступление в организацию</h1>
-  </div>
-</div>
-
-<section class="section">
-  <div class="container">
     <?php if (!empty($closed)): ?>
-
-      <div class="form-card form-narrow">
-        <div class="alert alert-warn">Приём заявок временно закрыт. Следите за новостями отделения — мы сообщим, когда он откроется снова.</div>
-        <a href="<?= url('index.php') ?>" class="btn btn-outline btn-block">На главную</a>
+      <div class="form-done">
+        <span class="done-ico"><?= icon('hourglass') ?></span>
+        <h2 class="display">Приём заявок закрыт</h2>
+        <p>Приём заявок временно приостановлен. Следите за&nbsp;новостями отделения: мы сообщим, когда он откроется снова.</p>
+        <a class="link-arrow" href="<?= url('news.php') ?>">Новости отделения<?= icon('arrow-up-right') ?></a>
       </div>
-
     <?php elseif ($done): ?>
-
-      <div class="form-card form-narrow">
-        <h1>Заявка отправлена</h1>
-        <div class="alert alert-success">
-          Спасибо! Ваша анкета передана администратору отделения.
-        </div>
-        <p class="form-intro">
-          Учётная запись создана, но вход в личный кабинет откроется после того, как администратор одобрит заявку.
-          Обычно проверка занимает один-два дня. Администратор может связаться с вами по указанному телефону.
-        </p>
-        <a href="<?= url('index.php') ?>" class="btn btn-primary btn-block">Вернуться на главную</a>
+      <div class="form-done" role="status">
+        <span class="done-ico"><?= icon('check-circle') ?></span>
+        <h2 class="display">Заявка отправлена</h2>
+        <p>Спасибо! Анкета передана администратору отделения. Вход в&nbsp;личный кабинет откроется после одобрения, обычно это один-два дня. Администратор может связаться с&nbsp;тобой по&nbsp;указанному телефону.</p>
+        <a class="link-arrow" href="<?= url('index.php') ?>">На главную<?= icon('arrow-up-right') ?></a>
       </div>
-
     <?php else: ?>
-
-      <div class="form-card form-wide">
-        <h1>Анкета волонтёра</h1>
-        <p class="form-intro">Заполните поля со звёздочкой. После отправки анкету проверит администратор отделения — доступ в личный кабинет откроется после одобрения.</p>
-
+      <form class="vform" method="post" novalidate data-validate>
+        <?= csrfField() ?>
         <?php if ($errors): ?>
-          <div class="alert alert-error">
-            Проверьте заполнение анкеты:
-            <ul><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul>
-          </div>
+          <div class="alert alert-error" role="alert"><b>Проверь анкету:</b><ul><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul></div>
         <?php endif; ?>
-
-        <form method="post" novalidate>
-          <?= csrfField() ?>
-
-          <div class="field-row">
-            <div class="field">
-              <label for="last_name">Фамилия <span class="req">*</span></label>
-              <input type="text" id="last_name" name="last_name" value="<?= e($old['last_name']) ?>" required>
-            </div>
-            <div class="field">
-              <label for="first_name">Имя <span class="req">*</span></label>
-              <input type="text" id="first_name" name="first_name" value="<?= e($old['first_name']) ?>" required>
-            </div>
+        <fieldset>
+          <legend>О себе</legend>
+          <div class="frow">
+            <?= $field('last_name', 'Фамилия', ['required' => true, 'err' => 'Укажи фамилию', 'attrs' => ['autocomplete' => 'family-name']]) ?>
+            <?= $field('first_name', 'Имя', ['required' => true, 'err' => 'Укажи имя', 'attrs' => ['autocomplete' => 'given-name']]) ?>
           </div>
-
-          <div class="field-row">
-            <div class="field">
-              <label for="middle_name">Отчество</label>
-              <input type="text" id="middle_name" name="middle_name" value="<?= e($old['middle_name']) ?>">
-            </div>
-            <div class="field">
-              <label for="birth_date">Дата рождения <span class="req">*</span></label>
-              <input type="date" id="birth_date" name="birth_date" value="<?= e($old['birth_date']) ?>" required>
-              <div class="hint">Вступить в организацию можно с 14 лет.</div>
-            </div>
+          <div class="frow">
+            <?= $field('middle_name', 'Отчество', ['attrs' => ['autocomplete' => 'additional-name']]) ?>
+            <?= $field('birth_date', 'Дата рождения', ['type' => 'date', 'required' => true, 'hint' => 'Вступить можно с 14 лет.', 'err' => 'Укажи дату рождения', 'attrs' => ['max' => date('Y-m-d')]]) ?>
           </div>
-
-          <div class="field-row">
-            <div class="field">
-              <label for="email">Электронная почта <span class="req">*</span></label>
-              <input type="email" id="email" name="email" value="<?= e($old['email']) ?>" required
-                     inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false">
-              <div class="hint">Он же логин для входа в личный кабинет.</div>
-            </div>
-            <div class="field">
-              <label for="phone">Телефон <span class="req">*</span></label>
-              <input type="tel" id="phone" name="phone" value="<?= e($old['phone']) ?>" placeholder="+7 900 000-00-00" required
-                     inputmode="tel" autocomplete="tel">
-            </div>
+        </fieldset>
+        <fieldset>
+          <legend>Связь</legend>
+          <div class="frow">
+            <?= $field('email', 'Электронная почта', ['type' => 'email', 'required' => true, 'hint' => 'Она же логин для входа.', 'err' => 'Проверь адрес почты', 'attrs' => ['inputmode' => 'email', 'autocomplete' => 'email', 'autocapitalize' => 'off', 'spellcheck' => 'false']]) ?>
+            <?= $field('phone', 'Телефон', ['type' => 'tel', 'required' => true, 'err' => 'Укажи телефон', 'attrs' => ['placeholder' => '+7 900 000-00-00', 'inputmode' => 'tel', 'autocomplete' => 'tel']]) ?>
           </div>
-
-          <div class="field-row">
-            <div class="field">
-              <label for="vk">Страница ВКонтакте</label>
-              <input type="text" id="vk" name="vk" value="<?= e($old['vk']) ?>" placeholder="vk.com/username">
-            </div>
-            <div class="field">
-              <label for="telegram">Telegram</label>
-              <input type="text" id="telegram" name="telegram" value="<?= e($old['telegram']) ?>" placeholder="@username">
-            </div>
+          <div class="frow">
+            <?= $field('vk', 'Страница ВКонтакте', ['attrs' => ['placeholder' => 'vk.com/username']]) ?>
+            <?= $field('telegram', 'Telegram', ['attrs' => ['placeholder' => '@username']]) ?>
           </div>
-
-          <div class="field">
-            <label for="school">Школа, колледж или место работы</label>
-            <input type="text" id="school" name="school" value="<?= e($old['school']) ?>">
+          <?= $field('school', 'Школа, колледж или место работы') ?>
+        </fieldset>
+        <fieldset>
+          <legend>Пароль для входа</legend>
+          <div class="frow">
+            <?= $field('password', 'Пароль', ['type' => 'password', 'required' => true, 'hint' => 'Не короче 8 символов.', 'err' => 'Минимум 8 символов', 'attrs' => ['minlength' => '8', 'autocomplete' => 'new-password']]) ?>
+            <?= $field('password2', 'Повтори пароль', ['type' => 'password', 'required' => true, 'err' => 'Пароли не совпадают', 'attrs' => ['minlength' => '8', 'autocomplete' => 'new-password']]) ?>
           </div>
-
-          <div class="field-row">
-            <div class="field">
-              <label for="password">Пароль <span class="req">*</span></label>
-              <input type="password" id="password" name="password" required minlength="8">
-              <div class="hint">Не короче 8 символов.</div>
-            </div>
-            <div class="field">
-              <label for="password2">Повторите пароль <span class="req">*</span></label>
-              <input type="password" id="password2" name="password2" required minlength="8">
-            </div>
-          </div>
-
-          <div class="field">
-            <label class="field-check">
-              <input type="checkbox" name="agree" value="1" required>
-              <span>Согласен на обработку персональных данных для целей работы волонтёрского отделения <span class="req">*</span></span>
-            </label>
-          </div>
-
-          <button type="submit" class="btn btn-accent btn-block">Отправить заявку</button>
-        </form>
-
-        <p class="form-foot">Уже состоите в организации? <a href="<?= url('login.php') ?>">Войти в личный кабинет</a></p>
-      </div>
-
+        </fieldset>
+        <label class="check"><input type="checkbox" name="agree" value="1" required><span>Согласен на&nbsp;обработку персональных данных для целей работы волонтёрского отделения <i>*</i></span></label>
+        <p class="err err-agree">Нужно согласие на&nbsp;обработку данных</p>
+        <button class="btn btn-accent btn-lg btn-block" type="submit">Отправить заявку<?= icon('arrow-right') ?></button>
+        <p class="form-foot">Уже в&nbsp;организации? <a href="<?= url('login.php') ?>">Войти</a></p>
+      </form>
     <?php endif; ?>
   </div>
 </section>
-
 <?php require __DIR__ . '/includes/footer.php'; ?>

@@ -1,21 +1,26 @@
 <?php
-/** Шапка публичной части. Перед подключением задайте $pageTitle и $activeNav. */
+/**
+ * Шапка публичной части. Перед подключением задайте $pageTitle и $activeNav.
+ * $navCta: 'home' — кнопка «Стать волонтёром» в шапке появляется после первого экрана,
+ *          'none' — не показывать (страница анкеты), иначе показывается всегда.
+ */
 require_once __DIR__ . '/icons.php';
-$pageTitle = $pageTitle ?? 'Молодая Гвардия · Щёлково';
+$pageTitle = $pageTitle ?? 'Молодая Гвардия Щёлково';
 $activeNav = $activeNav ?? '';
+$navCta    = $navCta ?? 'always';
 $me        = currentUser();
 $navItems  = [
-    ''            => ['Главная',      'index.php'],
-    'about'       => ['О нас',        'about.php'],
-    'team'        => ['Команда',      'team.php'],
-    'news'        => ['Новости',      'news.php'],
+    'about'    => ['О нас',       'about.php'],
+    'team'     => ['Команда',     'team.php'],
+    'news'     => ['Новости',     'news.php'],
 ];
 if ($me) {
     $navItems['events'] = ['Мероприятия', 'events.php'];
 }
 $navItems['gallery']  = ['Фотогалерея', 'gallery.php'];
 $navItems['contacts'] = ['Контакты',    'contacts.php'];
-$metaDescription = 'Местное отделение «Молодой Гвардии Единой России» в Щёлковском городском округе: волонтёрские проекты, мероприятия, новости и приём в организацию.';
+$metaDescription = $metaDescription ?? 'Местное отделение «Молодой Гвардии Единой России» в Щёлковском городском округе: люди, идеи и дела молодёжи округа.';
+$showCta = !$me && $navCta !== 'none' && setting('registration_open', '1') === '1';
 ?><!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -23,61 +28,71 @@ $metaDescription = 'Местное отделение «Молодой Гвар�
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e($pageTitle) ?></title>
 <meta name="description" content="<?= e($metaDescription) ?>">
-<meta name="theme-color" content="#0A1E45">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F1F3F9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#070B1F" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Молодая Гвардия · Щёлково">
+<meta property="og:site_name" content="Молодая Гвардия Щёлково">
 <meta property="og:title" content="<?= e($pageTitle) ?>">
 <meta property="og:description" content="<?= e($metaDescription) ?>">
 <meta property="og:image" content="<?= url('assets/img/favicon/icon-512.png') ?>">
 <meta name="twitter:card" content="summary">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  document.documentElement.classList.add('js');
+  try { var t = localStorage.getItem('mg-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<link rel="preload" href="<?= url('assets/fonts/alumni-sans-cyrillic.woff2') ?>" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="<?= url('assets/fonts/onest-cyrillic.woff2') ?>" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="<?= assetUrl('assets/css/fonts.css') ?>">
 <link rel="stylesheet" href="<?= assetUrl('assets/css/site.css') ?>">
 <link rel="icon" href="<?= url('favicon.ico') ?>" sizes="any">
 <link rel="icon" href="<?= url('assets/img/favicon/favicon-32.png') ?>" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="<?= url('assets/img/favicon/apple-touch-icon.png') ?>">
 </head>
-<body>
+<body class="page-<?= e($activeNav !== '' ? $activeNav : ($navCta === 'home' ? 'home' : 'other')) ?>">
 <a class="skip-link" href="#main">Перейти к содержимому</a>
 
-<header class="site-header">
-  <div class="container">
-    <div class="header-shell">
-      <div class="header-main">
-        <a href="<?= url('index.php') ?>" class="brand">
-          <img src="<?= url('assets/img/logo.webp') ?>" alt="Молодая Гвардия Щёлково">
-        </a>
-        <div class="header-tools">
-          <?php if ($me): ?>
-            <a href="<?= url(homeForRole($me['role'])) ?>" class="btn-join">Личный кабинет</a>
-            <a href="<?= url('logout.php') ?>" class="btn-login">Выйти</a>
-          <?php else: ?>
-            <a href="<?= url('login.php') ?>" class="btn-login">Вход</a>
-            <a href="<?= url('register.php') ?>" class="btn-join">Стать волонтёром</a>
-          <?php endif; ?>
-        </div>
-      </div>
-      <nav class="main-nav" aria-label="Основное меню">
-        <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="mainMenu">
-          <?= icon('menu') ?> Меню
-        </button>
-        <ul id="mainMenu">
-          <?php foreach ($navItems as $key => [$label, $href]): ?>
-            <li><a href="<?= url($href) ?>" class="<?= $activeNav === $key ? 'is-active' : '' ?>"><?= e($label) ?></a></li>
-          <?php endforeach; ?>
-          <li><a class="nav-cta" href="<?= url($me ? homeForRole($me['role']) : 'register.php') ?>">
-            <?= icon('arrow-right') ?><?= $me ? 'Личный кабинет' : 'Стать волонтёром' ?>
-          </a></li>
-        </ul>
-      </nav>
+<header class="nav <?= $navCta === 'home' ? '' : 'inner' ?>" id="nav">
+  <div class="wrap nav-row">
+    <a class="brand" href="<?= url('index.php') ?>" aria-label="Молодая Гвардия Щёлково, на главную"><span class="logo"></span></a>
+    <nav class="nav-links" aria-label="Основное меню">
+      <?php foreach ($navItems as $key => [$label, $href]): ?>
+        <a href="<?= url($href) ?>" class="<?= $activeNav === $key ? 'is-active' : '' ?>" <?= $activeNav === $key ? 'aria-current="page"' : '' ?>><?= e($label) ?></a>
+      <?php endforeach; ?>
+    </nav>
+    <div class="nav-actions">
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="Сменить тему оформления"><span class="ico-moon"><?= icon('moon') ?></span><span class="ico-sun"><?= icon('sun') ?></span></button>
+      <?php if ($me): ?>
+        <a class="nav-login" href="<?= url(homeForRole($me['role'])) ?>"><?= icon('user-circle') ?><span>Кабинет</span></a>
+        <a class="icon-btn" href="<?= url('logout.php') ?>" aria-label="Выйти"><?= icon('sign-out') ?></a>
+      <?php else: ?>
+        <a class="nav-login" href="<?= url('login.php') ?>"><?= icon('sign-in') ?><span>Войти</span></a>
+      <?php endif; ?>
+      <?php if ($showCta): ?>
+        <div class="nav-cta-wrap"><div><a class="btn btn-accent nav-cta" href="<?= url('register.php') ?>">Стать волонтёром</a></div></div>
+      <?php endif; ?>
+      <button class="icon-btn menu-btn" type="button" id="menuBtn" aria-expanded="false" aria-controls="menu" aria-label="Открыть меню"><span class="ico-list"><?= icon('menu') ?></span><span class="ico-x"><?= icon('close') ?></span></button>
     </div>
   </div>
 </header>
 
+<div class="menu" id="menu">
+  <?php foreach ($navItems as $key => [$label, $href]): ?>
+    <a class="big <?= $activeNav === $key ? 'is-active' : '' ?>" href="<?= url($href) ?>"><?= e($label) ?></a>
+  <?php endforeach; ?>
+  <?php if ($me): ?>
+    <div class="menu-extra">
+      <a href="<?= url(homeForRole($me['role'])) ?>"><?= icon('user-circle') ?>Личный кабинет</a>
+      <a href="<?= url('logout.php') ?>"><?= icon('sign-out') ?>Выйти</a>
+    </div>
+  <?php elseif ($showCta): ?>
+    <a class="btn btn-accent btn-lg" href="<?= url('register.php') ?>">Стать волонтёром<?= icon('arrow-right') ?></a>
+  <?php endif; ?>
+</div>
+
 <?php $flashes = takeFlash(); ?>
 <?php if ($flashes): ?>
-  <div class="container" style="padding-top:20px;">
+  <div class="wrap flash-wrap" role="status">
     <?php foreach ($flashes as $f): ?>
       <div class="alert alert-<?= e($f['type']) ?>"><?= e($f['message']) ?></div>
     <?php endforeach; ?>

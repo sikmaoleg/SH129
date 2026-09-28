@@ -13,7 +13,9 @@ if (!$ev) {
     $pageTitle = 'Мероприятие не найдено';
     $activeNav = 'events';
     require __DIR__ . '/includes/header.php';
-    echo '<section class="section"><div class="container"><div class="empty"><b>Мероприятие не найдено</b>Возможно, оно отменено или ссылка устарела.</div></div></section>';
+    echo '<section class="phead"><div class="wrap"><h1 class="phead-title display">Не найдено</h1>'
+       . '<p class="phead-lead">Возможно, мероприятие отменено или ссылка устарела.</p>'
+       . '<div class="row-ctas"><a class="btn btn-accent btn-lg" href="' . url('events.php') . '">Все мероприятия' . icon('arrow-right') . '</a></div></div></section>';
     require __DIR__ . '/includes/footer.php';
     exit;
 }
@@ -48,51 +50,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect('event.php?id=' . $id);
 }
 
-$pageTitle = $ev['title'] . ' — Молодая Гвардия Щёлково';
+$pageTitle = $ev['title'] . ': Молодая Гвардия Щёлково';
 $activeNav = 'events';
 $ts = strtotime($ev['starts_at']);
 require __DIR__ . '/includes/header.php';
 ?>
-<div class="page-head">
-  <div class="container">
-    <div class="breadcrumbs"><a href="<?= url('index.php') ?>">Главная</a> / <a href="<?= url('events.php') ?>">Мероприятия</a></div>
-    <h1><?= e($ev['title']) ?></h1>
-  </div>
-</div>
-
-<section class="section">
-  <div class="container">
-    <div class="article">
-      <div class="event-row" style="margin-bottom:28px;">
-        <div class="event-date">
-          <b><?= date('j', $ts) ?></b>
-          <span><?= RU_MONTHS_SHORT[(int)date('n', $ts)] ?></span>
-        </div>
-        <div class="event-info">
-          <div class="event-meta">
-            <span><?= icon('calendar') ?><?= e(ruDate($ev['starts_at'], true)) ?></span>
-            <?php if ($ev['location']): ?><span><?= icon('map-pin') ?><?= e($ev['location']) ?></span><?php endif; ?>
-            <?php if ($ev['direction_title']): ?><span><?= icon('target') ?><?= e($ev['direction_title']) ?></span><?php endif; ?>
-            <?php if ($freeSlots !== null): ?><span><?= icon('users') ?><?= $freeSlots ?> из <?= (int)$ev['capacity'] ?></span><?php endif; ?>
-          </div>
-        </div>
-      </div>
-
-      <?php if ($ev['cover']): ?><img src="<?= url('uploads/events/'.$ev['cover']) ?>" alt=""><?php endif; ?>
-
+<article class="art">
+  <div class="wrap">
+    <header class="art-head">
+      <nav class="crumbs" aria-label="Навигация"><a href="<?= url('index.php') ?>">Главная</a><span>/</span><a href="<?= url('events.php') ?>">Мероприятия</a></nav>
+      <h1 class="art-title display"><?= e($ev['title']) ?></h1>
+    </header>
+    <dl class="ev-facts" style="margin-top:clamp(28px,3vw,44px)">
+      <div><dt>Когда</dt><dd><?= e(ruDate($ev['starts_at'], true)) ?></dd></div>
+      <?php if ($ev['location']): ?><div><dt>Где</dt><dd><?= e($ev['location']) ?></dd></div><?php endif; ?>
+      <?php if ($ev['direction_title']): ?><div><dt>Направление</dt><dd><?= e($ev['direction_title']) ?></dd></div><?php endif; ?>
+      <?php if ($freeSlots !== null): ?><div><dt>Свободных мест</dt><dd><?= $freeSlots ?> из <?= (int)$ev['capacity'] ?></dd></div><?php endif; ?>
+    </dl>
+    <?php if ($ev['cover']): ?><img class="ev-cover" src="<?= url('uploads/events/' . $ev['cover']) ?>" alt=""><?php endif; ?>
+    <div class="art-body">
       <?php foreach (preg_split("/\R{2,}/", (string)$ev['description']) as $para): ?>
         <?php if (trim($para) !== ''): ?><p><?= nl2br(e(trim($para))) ?></p><?php endif; ?>
       <?php endforeach; ?>
 
-      <div style="margin-top:32px;">
+      <div class="ev-actions">
         <?php if ($isPast): ?>
           <div class="alert alert-info">Мероприятие уже прошло.</div>
         <?php elseif ($myReg && $myReg['status'] === 'registered'): ?>
-          <div class="alert alert-success">Вы записаны на это мероприятие.</div>
+          <div class="alert alert-success">Ты записан на&nbsp;это мероприятие.</div>
           <form method="post">
             <?= csrfField() ?>
             <input type="hidden" name="action" value="cancel">
-            <button type="submit" class="btn btn-outline">Отменить запись</button>
+            <button type="submit" class="btn btn-outline" data-confirm="Отменить запись на мероприятие?">Отменить запись</button>
           </form>
         <?php elseif ($freeSlots !== null && $freeSlots <= 0): ?>
           <div class="alert alert-warn">Свободных мест не осталось.</div>
@@ -100,16 +89,15 @@ require __DIR__ . '/includes/header.php';
           <form method="post">
             <?= csrfField() ?>
             <input type="hidden" name="action" value="signup">
-            <button type="submit" class="btn btn-accent">Записаться на мероприятие</button>
+            <button type="submit" class="btn btn-accent btn-lg">Записаться<?= icon('arrow-right') ?></button>
           </form>
         <?php endif; ?>
         <?php if (!$isPast): ?>
-          <a href="<?= url('event-ics.php?id=' . $id) ?>" class="btn btn-outline" style="margin-top:10px;"><?= icon('download') ?>Добавить в календарь</a>
+          <a href="<?= url('event-ics.php?id=' . $id) ?>" class="link-arrow"><?= icon('calendar-plus') ?>Добавить в&nbsp;календарь</a>
         <?php endif; ?>
       </div>
-
       <?= shareButtons(url('event.php?id=' . $id), $ev['title']) ?>
     </div>
   </div>
-</section>
+</article>
 <?php require __DIR__ . '/includes/footer.php'; ?>

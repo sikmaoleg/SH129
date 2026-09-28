@@ -1,51 +1,53 @@
 <?php
 require_once __DIR__ . '/includes/bootstrap.php';
-$pageTitle = 'Контакты — Молодая Гвардия Щёлково';
+$pageTitle = 'Контакты: Молодая Гвардия Щёлково';
 $activeNav = 'contacts';
+
+$address = setting('org_address', 'Московская область, г. Щёлково');
+// Короткий адрес крупно, область и город — мелкой строкой под ним
+$addrParts = array_map('trim', explode(',', $address));
+$addrMain  = count($addrParts) > 2 ? implode(', ', array_slice($addrParts, 2)) : $address;
+$addrSub   = count($addrParts) > 2 ? implode(', ', array_slice($addrParts, 0, 2)) : '';
+$phone     = setting('org_leader_phone');
+
+$mapCoords = array_map('trim', explode(',', setting('org_map_coords')));
+$mapLat = $mapCoords[0] ?? '';
+$mapLon = $mapCoords[1] ?? '';
+
 require __DIR__ . '/includes/header.php';
 ?>
-<div class="page-head">
-  <div class="container">
-    <div class="breadcrumbs"><a href="<?= url('index.php') ?>">Главная</a> / Контакты</div>
-    <h1>Контакты</h1>
+<header class="phead">
+  <div class="wrap">
+    <nav class="crumbs" aria-label="Навигация"><a href="<?= url('index.php') ?>">Главная</a><span>/</span><span>Контакты</span></nav>
+    <h1 class="phead-title display">Контакты</h1>
+    <p class="phead-lead">Приходи знакомиться лично, звони или пиши.</p>
   </div>
-</div>
-<section class="section">
-  <div class="container">
-    <div class="dir-grid">
-      <?php if (setting('org_leader_name')): ?>
-      <div class="dir-card">
-        <div class="num"><?= icon('user-plus') ?></div>
-        <h3>Руководитель местного отделения</h3>
-        <p><?= e(setting('org_leader_name')) ?></p>
-        <?php if (setting('org_leader_phone')): ?><p><a href="tel:<?= e(preg_replace('/[^\d+]/', '', setting('org_leader_phone'))) ?>"><?= e(setting('org_leader_phone')) ?></a></p><?php endif; ?>
-      </div>
+</header>
+
+<section class="sec">
+  <div class="wrap contacts">
+    <dl class="clist" data-reveal>
+      <div><dt>Штаб отделения</dt><dd class="display"><?= e($addrMain) ?></dd><?php if ($addrSub): ?><dd class="sub"><?= e($addrSub) ?></dd><?php endif; ?></div>
+      <?php if ($phone): ?>
+        <div><dt>Руководитель</dt><dd class="display"><a href="tel:<?= e(preg_replace('/[^\d+]/', '', $phone)) ?>"><?= e($phone) ?></a></dd><?php if (setting('org_leader_name')): ?><dd class="sub"><?= e(setting('org_leader_name')) ?></dd><?php endif; ?></div>
       <?php endif; ?>
-      <div class="dir-card">
-        <div class="num"><?= icon('map-pin') ?></div>
-        <h3>Адрес</h3>
-        <p><?= e(setting('org_address', 'Московская область, г. Щёлково')) ?></p>
+      <?php if (setting('org_email')): ?>
+        <div><dt>Почта</dt><dd class="display lower"><a href="mailto:<?= e(setting('org_email')) ?>"><?= e(setting('org_email')) ?></a></dd></div>
+      <?php endif; ?>
+      <?php if (setting('org_vk') || setting('org_tg')): ?>
+        <div><dt>Мы в&nbsp;соцсетях</dt><dd class="soc-row">
+          <?php if (setting('org_vk')): ?><a class="soc-big" href="<?= e(setting('org_vk')) ?>" target="_blank" rel="noopener"><?= icon('vk') ?>ВКонтакте</a><?php endif; ?>
+          <?php if (setting('org_tg')): ?><a class="soc-big" href="<?= e(setting('org_tg')) ?>" target="_blank" rel="noopener"><?= icon('telegram-brand') ?>Telegram</a><?php endif; ?>
+        </dd></div>
+      <?php endif; ?>
+    </dl>
+    <?php if (is_numeric($mapLat) && is_numeric($mapLon)): ?>
+      <div class="cmap" data-reveal>
+        <iframe src="https://yandex.ru/map-widget/v1/?ll=<?= e($mapLon) ?>%2C<?= e($mapLat) ?>&amp;z=16&amp;pt=<?= e($mapLon) ?>,<?= e($mapLat) ?>,pm2blm"
+                title="Штаб отделения на карте: <?= e($address) ?>" loading="lazy" allowfullscreen></iframe>
+        <a class="map-link" href="https://yandex.ru/maps/?pt=<?= e($mapLon) ?>,<?= e($mapLat) ?>&amp;z=16&amp;l=map" target="_blank" rel="noopener"><?= icon('map-pin') ?>Открыть на Яндекс.Картах</a>
       </div>
-      <div class="dir-card">
-        <div class="num"><?= icon('mail') ?></div>
-        <h3>Электронная почта</h3>
-        <p><a href="mailto:<?= e(setting('org_email')) ?>"><?= e(setting('org_email', 'info@example.ru')) ?></a></p>
-      </div>
-      <div class="dir-card">
-        <div class="num"><?= icon('users') ?></div>
-        <h3>Социальные сети</h3>
-        <p>
-          <?php if (setting('org_vk')): ?><a href="<?= e(setting('org_vk')) ?>" target="_blank" rel="noopener">ВКонтакте</a><br><?php endif; ?>
-          <?php if (setting('org_tg')): ?><a href="<?= e(setting('org_tg')) ?>" target="_blank" rel="noopener">Telegram</a><?php endif; ?>
-          <?php if (!setting('org_vk') && !setting('org_tg')): ?>Ссылки добавляются в панели управления.<?php endif; ?>
-        </p>
-      </div>
-    </div>
-    <div class="article" style="margin-top:40px;">
-      <h2>Хотите присоединиться?</h2>
-      <p>Подайте заявку через сайт — администратор свяжется с вами по указанному телефону и подскажет, с какого мероприятия начать.</p>
-      <p><a href="<?= url('register.php') ?>" class="btn btn-accent">Стать волонтёром</a></p>
-    </div>
+    <?php endif; ?>
   </div>
 </section>
 <?php require __DIR__ . '/includes/footer.php'; ?>

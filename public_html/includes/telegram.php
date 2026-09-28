@@ -164,7 +164,8 @@ function runTelegramSync(): array
         }
 
         $lines = preg_split('/\R/', $text);
-        $title = trim($lines[0] ?? 'Новость из Telegram');
+        // Без эмодзи по краям; если первая строка из одних эмодзи — берём следующую содержательную
+        $title = cleanNewsTitle(trim($lines[0] ?? ''), $text);
         if (mb_strlen($title) > 180) {
             $title = mb_substr($title, 0, 180) . '…';
         }
