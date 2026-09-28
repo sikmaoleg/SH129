@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 requireDev();
 
 $panelSection = 'dev';
-$panelTitle   = 'Журнал действий';
+$panelTitle   = 'Журнал';
 $activeItem   = 'logs';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -39,63 +39,54 @@ $rows = fetchAll(
 
 $actions = fetchAll('SELECT action, COUNT(*) AS c FROM audit_log GROUP BY action ORDER BY c DESC');
 
+$panelLead = 'Входы, решения по заявкам, баллы и правки данных. Всего записей: ' . number_format($total, 0, ',', ' ') . '.';
+$panelActions = '<form method="post" style="margin:0">' . csrfField() . '<input type="hidden" name="action" value="clear_old"><button class="btn btn-line" type="submit" data-confirm="Удалить записи журнала старше 90 дней?">' . icon('trash') . 'Удалить старше 90 дней</button></form>';
+$pageUrl = fn(int $p) => url('dev/logs.php?page=' . $p . ($filterAction !== '' ? '&action_filter=' . urlencode($filterAction) : ''));
+
 require __DIR__ . '/../includes/panel_header.php';
 ?>
 
-<div class="card">
-  <div class="card-head">
-    <div><h2>Записей: <?= $total ?></h2><p>Фиксируются входы, одобрения заявок, начисления баллов и правки данных.</p></div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <form method="get" class="inline-form">
-        <select name="action_filter" onchange="this.form.submit()">
-          <option value="">все действия</option>
-          <?php foreach ($actions as $a): ?>
-            <option value="<?= e($a['action']) ?>" <?= $filterAction === $a['action'] ? 'selected' : '' ?>>
-              <?= e($a['action']) ?> (<?= (int)$a['c'] ?>)
-            </option>
-          <?php endforeach; ?>
-        </select>
-      </form>
-      <form method="post" style="margin:0;">
-        <?= csrfField() ?>
-        <input type="hidden" name="action" value="clear_old">
-        <button class="btn btn-outline btn-sm" data-confirm="Удалить записи журнала старше 90 дней?">Очистить старые</button>
-      </form>
-    </div>
+<section class="card">
+  <div class="toolbar">
+    <form method="get" class="row" style="flex-wrap:wrap">
+      <label class="sr" for="lf">Тип действия</label>
+      <select class="select" id="lf" name="action_filter" onchange="this.form.submit()" style="min-width:260px">
+        <option value="">Все действия</option>
+        <?php foreach ($actions as $a): ?>
+          <option value="<?= e($a['action']) ?>" <?= $filterAction === $a['action'] ? 'selected' : '' ?>><?= e(actionLabel($a['action'])[0]) ?> (<?= (int)$a['c'] ?>)</option>
+        <?php endforeach; ?>
+      </select>
+      <?php if ($filterAction !== ''): ?><a class="btn btn-ghost btn-sm" href="<?= url('dev/logs.php') ?>"><?= icon('x') ?>Сбросить</a><?php endif; ?>
+    </form>
   </div>
 
   <?php if ($rows): ?>
-    <div class="card-body card-body-flush table-wrap">
-      <table class="data">
-        <thead><tr><th>Время</th><th>Действие</th><th>Объект</th><th>Кто</th><th>IP</th><th>Подробности</th></tr></thead>
-        <tbody>
-          <?php foreach ($rows as $r): ?>
-            <tr>
-              <td style="white-space:nowrap;color:var(--muted);font-size:.83rem;"><?= e(date('d.m.Y H:i:s', strtotime($r['created_at']))) ?></td>
-              <td class="mono"><?= e($r['action']) ?></td>
-              <td class="mono" style="color:var(--muted);"><?= e($r['entity'] ?: '—') ?><?= $r['entity_id'] ? ' #' . (int)$r['entity_id'] : '' ?></td>
-              <td><?= e(trim(($r['last_name'] ?? '') . ' ' . ($r['first_name'] ?? '')) ?: 'гость') ?></td>
-              <td class="mono" style="color:var(--muted);"><?= e($r['ip'] ?: '—') ?></td>
-              <td style="font-size:.84rem;color:var(--muted);"><?= e($r['meta'] ?: '') ?></td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
-
+    <ul class="feed">
+      <?php foreach ($rows as $r): [$label, $ic, $kind] = actionLabel($r['action']); $who = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? '')); ?>
+        <li>
+          <span class="dot <?= e($kind) ?>"><?= icon($ic) ?></span>
+          <div style="min-width:0">
+            <p><b style="font-weight:600"><?= e($who ?: 'Гость') ?></b> <span><?= e(mb_strtolower($label)) ?></span><?= $r['meta'] ? ': ' . e($r['meta']) : '' ?></p>
+            <span class="log-code"><?= e($r['action']) ?><?= $r['entity'] ? ' · ' . e($r['entity']) . ($r['entity_id'] ? ' #' . (int)$r['entity_id'] : '') : '' ?><?= $r['ip'] ? ' · ' . e($r['ip']) : '' ?></span>
+          </div>
+          <time datetime="<?= e(date('c', strtotime($r['created_at']))) ?>"><?= e(date('d.m.Y H:i', strtotime($r['created_at']))) ?></time>
+        </li>
+      <?php endforeach; ?>
+    </ul>
     <?php if ($pages > 1): ?>
-      <div class="card-body">
-        <div class="pagination">
-          <?php for ($p = max(1, $page - 4); $p <= min($pages, $page + 4); $p++): ?>
-            <?php if ($p === $page): ?><span class="is-current"><?= $p ?></span>
-            <?php else: ?><a href="<?= url('dev/logs.php?page='.$p . ($filterAction !== '' ? '&action_filter='.urlencode($filterAction) : '')) ?>"><?= $p ?></a><?php endif; ?>
+      <div class="card-f" style="justify-content:center">
+        <div class="pagination" style="margin:0">
+          <?php if ($page > 1): ?><a href="<?= $pageUrl($page - 1) ?>" aria-label="Назад"><?= icon('caret-left') ?></a><?php endif; ?>
+          <?php for ($p = max(1, $page - 3); $p <= min($pages, $page + 3); $p++): ?>
+            <?php if ($p === $page): ?><span class="is-current"><?= $p ?></span><?php else: ?><a href="<?= $pageUrl($p) ?>"><?= $p ?></a><?php endif; ?>
           <?php endfor; ?>
+          <?php if ($page < $pages): ?><a href="<?= $pageUrl($page + 1) ?>" aria-label="Вперёд"><?= icon('caret-right') ?></a><?php endif; ?>
         </div>
       </div>
     <?php endif; ?>
   <?php else: ?>
-    <div class="empty"><b>Записей нет</b>Журнал заполнится по мере работы с сайтом.</div>
+    <div class="empty"><?= icon('list-checks') ?><b>Записей нет</b>Журнал заполнится по мере работы с сайтом.</div>
   <?php endif; ?>
-</div>
+</section>
 
 <?php require __DIR__ . '/../includes/panel_footer.php'; ?>

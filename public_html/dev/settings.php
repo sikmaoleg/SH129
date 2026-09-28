@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 requireDev();
 
 $panelSection = 'dev';
-$panelTitle   = 'Настройки сайта';
+$panelTitle   = 'Настройки';
 $activeItem   = 'settings';
 
 $editable = [
@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     foreach ($th as $v) {
         if ($v === '' || !ctype_digit($v)) {
-            $errors[] = 'Пороги уровней — только целые числа через запятую.';
+            $errors[] = 'Пороги уровней: только целые числа.';
             break;
         }
     }
@@ -60,42 +60,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect('dev/settings.php');
 }
 
+$lv = levels();
+$f = fn(string $key, string $label, string $hint = '', string $type = 'text', string $ph = '') =>
+    '<div class="field"><label for="s_' . $key . '">' . e($label) . '</label><input class="input" type="' . $type . '" id="s_' . $key . '" name="' . $key . '" value="' . e(setting($key)) . '"' . ($ph !== '' ? ' placeholder="' . e($ph) . '"' : '') . '>' . ($hint !== '' ? '<span class="hint">' . e($hint) . '</span>' : '') . '</div>';
+$stats = [
+    'stat_volunteers' => ['Волонтёров', 'Сейчас считается по базе'],
+    'stat_events'     => ['Мероприятий', 'Проведённые мероприятия из базы'],
+    'stat_hours'      => ['Часов добровольчества', 'Сумма часов из базы'],
+];
+$panelLead = 'Контакты, приём заявок, уровни и цифры на главной. Изменения появятся на сайте сразу после сохранения.';
+
 require __DIR__ . '/../includes/panel_header.php';
 ?>
 
-<div class="card">
-  <div class="card-head">
-    <div><h2>Параметры сайта</h2><p>Эти значения подставляются в шапку, подвал и расчёт уровней.</p></div>
-  </div>
-  <div class="card-body">
-    <form method="post">
-      <?= csrfField() ?>
-      <?php foreach ($editable as $key => [$label, $type]): ?>
-        <div class="field">
-          <label for="s_<?= e($key) ?>"><?= e($label) ?></label>
-          <input type="<?= $type === 'number' ? 'number' : 'text' ?>" id="s_<?= e($key) ?>" name="<?= e($key) ?>"
-                 value="<?= e(setting($key)) ?>">
-          <div class="hint mono"><?= e($key) ?></div>
-        </div>
-      <?php endforeach; ?>
-      <button type="submit" class="btn btn-primary">Сохранить настройки</button>
-    </form>
-  </div>
-</div>
+<form method="post" id="settingsForm" class="set-layout">
+  <?= csrfField() ?>
+  <nav class="set-nav" aria-label="Разделы настроек">
+    <a href="#set-org" class="on">Организация</a>
+    <a href="#set-reg">Приём заявок</a>
+    <a href="#set-levels">Баллы и уровни</a>
+    <a href="#set-stats">Цифры на главной</a>
+  </nav>
 
-<div class="card">
-  <div class="card-head"><div><h2>Текущая шкала уровней</h2></div></div>
-  <div class="card-body card-body-flush table-wrap">
-    <table class="data">
-      <thead><tr><th>№</th><th>Название</th><th>Диапазон баллов</th></tr></thead>
-      <tbody>
-        <?php foreach (levels() as $l): ?>
-          <tr><td class="num"><?= $l['index'] ?></td><td><?= e($l['name']) ?></td>
-              <td class="mono"><?= $l['min'] ?><?= $l['max'] !== null ? '–' . $l['max'] : '+' ?></td></tr>
+  <div class="stack">
+    <section class="card set-sec" id="set-org">
+      <div class="card-h"><div><h2>Организация</h2><p>Шапка, подвал, страница контактов</p></div></div>
+      <div class="card-b stack">
+        <?= $f('org_name', 'Название организации') ?>
+        <div class="frow"><?= $f('org_leader_name', 'Руководитель местного отделения') ?><?= $f('org_leader_phone', 'Телефон руководителя', '', 'tel') ?></div>
+        <div class="frow"><?= $f('org_email', 'Электронная почта', '', 'email') ?><?= $f('org_address', 'Адрес') ?></div>
+        <?= $f('org_map_coords', 'Координаты офиса на карте', 'Широта и долгота через запятую, как в Яндекс Картах', 'text', '55.919256, 37.994084') ?>
+        <div class="frow"><?= $f('org_vk', 'Ссылка на ВКонтакте') ?><?= $f('org_tg', 'Ссылка на Telegram') ?></div>
+      </div>
+    </section>
+
+    <section class="card set-sec" id="set-reg">
+      <div class="card-h"><div><h2>Приём заявок</h2><p>Кнопка «Вступить» и анкета на сайте</p></div></div>
+      <div class="card-b">
+        <input type="hidden" id="registration_open" name="registration_open" value="<?= setting('registration_open', '1') === '1' ? '1' : '0' ?>">
+        <label class="switchbox">
+          <span><b>Анкета открыта</b><small>Если выключить, форма вступления покажет, что приём временно закрыт</small></span>
+          <input type="checkbox" id="registration_toggle" <?= setting('registration_open', '1') === '1' ? 'checked' : '' ?>><span class="toggle"></span>
+        </label>
+      </div>
+    </section>
+
+    <section class="card set-sec" id="set-levels">
+      <div class="card-h"><div><h2>Баллы и уровни</h2><p>Уровень волонтёра зависит от суммы баллов</p></div></div>
+      <div class="card-b stack">
+        <?= $f('points_coordinator', 'Баллов за координацию', 'Подсказка на странице начисления, сама ничего не начисляет', 'number') ?>
+        <input type="hidden" id="level_thresholds" name="level_thresholds" value="<?= e(setting('level_thresholds', '0,100,300,700,1500')) ?>">
+        <input type="hidden" id="level_names" name="level_names" value="<?= e(setting('level_names', 'Новичок,Активист,Опытный,Наставник,Легенда')) ?>">
+        <div class="stack" style="gap:10px" id="lvRows">
+          <div class="lv-row lv-headrow"><span></span><span class="lbl">Название уровня</span><span class="lbl">С каких баллов</span></div>
+          <?php foreach ($lv as $l): ?>
+            <div class="lv-row">
+              <span class="lv-n"><?= $l['index'] ?></span>
+              <input class="input" data-lv="name" value="<?= e($l['name']) ?>" aria-label="Название уровня <?= $l['index'] ?>" required>
+              <input class="input num" data-lv="min" type="number" min="0" step="1" value="<?= (int)$l['min'] ?>" aria-label="Порог уровня <?= $l['index'] ?>" required <?= $l['index'] === 1 ? 'readonly' : '' ?>>
+            </div>
+          <?php endforeach; ?>
+        </div>
+        <div class="row" style="flex-wrap:wrap">
+          <button type="button" class="btn btn-line btn-sm" data-lv-add><?= icon('plus') ?>Добавить уровень</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-lv-del><?= icon('trash') ?>Убрать последний</button>
+          <span class="hint">Первый уровень всегда с нуля. Пороги идут по возрастанию.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card set-sec" id="set-stats">
+      <div class="card-h"><div><h2>Цифры на главной</h2><p>По умолчанию считаются сами. Включи, чтобы задать число вручную</p></div></div>
+      <div class="card-b stack">
+        <?php foreach ($stats as $key => [$label, $hint]): $val = (int)setting($key, '0'); ?>
+          <div class="stat-row">
+            <label class="switchbox">
+              <span><b><?= e($label) ?></b><small><?= $val > 0 ? 'Задано вручную' : e($hint) ?></small></span>
+              <input type="checkbox" data-stat-toggle="s_<?= $key ?>" <?= $val > 0 ? 'checked' : '' ?> aria-label="<?= e($label) ?>: задать вручную"><span class="toggle"></span>
+            </label>
+            <input class="input num" type="number" min="0" id="s_<?= $key ?>" name="<?= $key ?>" value="<?= $val ?>" data-last="<?= $val ?: '' ?>" <?= $val > 0 ? '' : 'disabled' ?> aria-label="<?= e($label) ?>">
+          </div>
         <?php endforeach; ?>
-      </tbody>
-    </table>
+      </div>
+    </section>
+
+    <div class="dirty" id="dirty" hidden>
+      <?= icon('alert') ?><p>Есть несохранённые изменения</p>
+      <a class="btn btn-line btn-sm" href="<?= url('dev/settings.php') ?>">Отменить</a>
+      <button type="submit" class="btn btn-accent btn-sm">Сохранить</button>
+    </div>
+    <div><button type="submit" class="btn btn-accent">Сохранить настройки</button></div>
   </div>
-</div>
+</form>
 
 <?php require __DIR__ . '/../includes/panel_footer.php'; ?>

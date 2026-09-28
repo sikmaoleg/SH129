@@ -14,7 +14,8 @@ if (!$event) {
 }
 
 $panelSection = 'admin';
-$panelTitle   = 'Участники мероприятия';
+$panelTitle   = 'Отметки участия';
+$panelCrumb   = ['Мероприятия', 'admin/events.php'];
 $activeItem   = 'events';
 
 // ---------------------------------------------------------------------
@@ -101,89 +102,65 @@ $regs = fetchAll(
 
 $isPast = strtotime($event['starts_at']) < time();
 
+$panelLead = e($event['title']) . ' · ' . e(ruDate($event['starts_at'], true)) . ($event['location'] ? ' · ' . e($event['location']) : '');
+$panelActions = '<a class="btn btn-line" href="' . url('admin/export.php?type=event&event_id=' . $eventId) . '">' . icon('download') . 'Экспорт CSV</a>'
+              . '<a class="btn btn-line" href="' . url('admin/events.php?edit=' . $eventId) . '">' . icon('pencil') . 'Править</a>';
+$cnt = ['attended' => 0, 'no_show' => 0, 'cancelled' => 0, 'registered' => 0];
+foreach ($regs as $r) { $cnt[$r['status']]++; }
+$reward = (int)$event['points_reward'];
+
 require __DIR__ . '/../includes/panel_header.php';
 ?>
 
-<div class="card">
-  <div class="card-head">
-    <div>
-      <h2><?= e($event['title']) ?></h2>
-      <p><?= e(ruDate($event['starts_at'], true)) ?><?= $event['location'] ? ' · ' . e($event['location']) : '' ?>
-         · за участие <?= (int)$event['points_reward'] ?> <?= plural((int)$event['points_reward'], 'балл', 'балла', 'баллов') ?></p>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <a href="<?= url('admin/export.php?type=event&event_id='.$eventId) ?>" class="btn btn-outline btn-sm"><?= icon('download') ?>Экспорт CSV</a>
-      <a href="<?= url('admin/events.php?edit='.$eventId) ?>" class="btn btn-outline btn-sm">Править</a>
-      <?php if ($event['status'] !== 'finished'): ?>
-        <form method="post" style="margin:0;">
-          <?= csrfField() ?>
-          <input type="hidden" name="action" value="finish">
-          <button class="btn btn-outline btn-sm" data-confirm="Отметить мероприятие как завершённое?">Завершить</button>
-        </form>
-      <?php endif; ?>
-    </div>
-  </div>
+<?php if (!$isPast): ?>
+  <div class="alert info" style="margin-bottom:16px"><?= icon('info') ?><div><b>Мероприятие ещё не состоялось</b><p>Отметить участие и начислить баллы можно будет после его проведения. Пока здесь список записавшихся.</p></div></div>
+<?php endif; ?>
 
-  <?php if (!$isPast): ?>
-    <div class="card-body" style="padding-bottom:0;">
-      <div class="alert alert-info">Мероприятие ещё не состоялось. Отметить участие и начислить баллы можно будет после его проведения.</div>
-    </div>
-  <?php endif; ?>
-
+<section class="card">
   <?php if ($regs): ?>
-    <form method="post">
+    <form method="post" id="attForm" data-reward="<?= $reward ?>">
       <?= csrfField() ?>
       <input type="hidden" name="action" value="mark">
-      <?php if ($isPast): ?>
-        <div class="card-body" style="padding-bottom:0;display:flex;gap:8px;flex-wrap:wrap;">
-          <button type="button" class="btn btn-outline btn-sm" data-bulk-status="attended">Отметить всех пришедшими</button>
-          <button type="button" class="btn btn-outline btn-sm" data-bulk-status="no_show">Отметить всех неявившимися</button>
+      <div class="toolbar">
+        <div class="att-stats" id="attStats">
+          <span class="chip"><?= icon('users') ?>Записались: <?= count($regs) - $cnt['cancelled'] ?></span>
+          <span class="chip ok"><?= icon('check') ?>Пришли: <b data-c="attended"><?= $cnt['attended'] ?></b></span>
+          <span class="chip dark"><?= icon('close') ?>Не пришли: <b data-c="no_show"><?= $cnt['no_show'] ?></b></span>
+          <span class="chip warn"><?= icon('hourglass') ?>Без отметки: <b data-c="registered"><?= $cnt['registered'] ?></b></span>
         </div>
-      <?php endif; ?>
-      <div class="card-body card-body-flush table-wrap">
-        <table class="data cards">
-          <thead>
-            <tr>
-              <th>Волонтёр</th>
-              <th>Телефон</th>
-              <th style="width:180px;">Отметка</th>
-              <th style="width:110px;">Начислено</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php foreach ($regs as $r): ?>
-              <tr>
-                <td><b><?= e($r['last_name'] . ' ' . $r['first_name']) ?></b>
-                    <div style="font-size:.79rem;color:var(--muted);">всего баллов: <?= (int)$r['points'] ?></div></td>
-                <td data-label="Телефон" style="color:var(--muted);font-size:.86rem;"><?= e($r['phone'] ?: '—') ?></td>
-                <td data-label="Отметка">
-                  <select name="status[<?= (int)$r['id'] ?>]">
-                    <option value="registered" <?= $r['status'] === 'registered' ? 'selected' : '' ?>>записан</option>
-                    <option value="attended"   <?= $r['status'] === 'attended' ? 'selected' : '' ?>>участие принято</option>
-                    <option value="no_show"    <?= $r['status'] === 'no_show' ? 'selected' : '' ?>>не пришёл</option>
-                    <option value="cancelled"  <?= $r['status'] === 'cancelled' ? 'selected' : '' ?>>отменено</option>
-                  </select>
-                </td>
-                <td class="num" data-label="Начислено" style="color:<?= (int)$r['points_awarded'] > 0 ? 'var(--ok)' : 'var(--muted)' ?>;">
-                  <?= (int)$r['points_awarded'] > 0 ? '+' . (int)$r['points_awarded'] : '—' ?>
-                </td>
-              </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
+        <span class="spacer"></span>
+        <?php if ($isPast): ?>
+          <button type="button" class="btn btn-line btn-sm" data-bulk-status="attended"><?= icon('check') ?>Все пришли</button>
+          <button type="button" class="btn btn-line btn-sm" data-bulk-status="no_show">Никто не пришёл</button>
+        <?php endif; ?>
       </div>
-      <div class="card-body" style="border-top:1px solid var(--line);">
-        <button type="submit" class="btn btn-primary" <?= $isPast ? '' : 'disabled' ?>>Сохранить отметки и начислить баллы</button>
-        <p style="font-size:.83rem;color:var(--muted);margin-top:10px;">
-          Баллы начисляются один раз при переводе в статус «участие принято». Если снять отметку — баллы вернутся обратно.
-        </p>
+      <?php foreach ($regs as $r): $name = $r['first_name'] . ' ' . $r['last_name']; ?>
+        <div class="att-row">
+          <div class="who">
+            <span class="ava"><?= e(mb_substr($r['first_name'], 0, 1) . mb_substr($r['last_name'], 0, 1)) ?></span>
+            <div><b><?= e($name) ?></b><small><?= e($r['phone'] ?: 'телефон не указан') ?><?= (int)$r['points_awarded'] > 0 ? ' · начислено +' . (int)$r['points_awarded'] : '' ?></small></div>
+          </div>
+          <fieldset class="att-seg" <?= $isPast ? '' : 'disabled' ?>>
+            <legend class="sr">Участие: <?= e($name) ?></legend>
+            <?php foreach (['attended' => ['Пришёл', 'check'], 'no_show' => ['Не пришёл', 'close'], 'cancelled' => ['Отменил', 'undo'], 'registered' => ['Записан', 'hourglass']] as $v => [$l, $ic]): ?>
+              <label class="att-opt"><input type="radio" name="status[<?= (int)$r['id'] ?>]" value="<?= $v ?>" <?= $r['status'] === $v ? 'checked' : '' ?>><span data-v="<?= $v ?>"><?= icon($ic) ?><?= $l ?></span></label>
+            <?php endforeach; ?>
+          </fieldset>
+        </div>
+      <?php endforeach; ?>
+      <div class="savebar">
+        <p id="attSum">Отметь, кто пришёл. Баллы начислятся при сохранении.</p>
+        <?php if ($isPast && $event['status'] !== 'finished'): ?>
+          <button class="btn btn-line" type="submit" form="finishForm" data-confirm="Отметить мероприятие как завершённое?">Завершить</button>
+        <?php endif; ?>
+        <button class="btn btn-accent" type="submit" <?= $isPast ? '' : 'disabled' ?>>Сохранить и начислить баллы</button>
       </div>
     </form>
+    <p class="muted" style="font-size:13px;padding:12px 20px">Баллы начисляются один раз при отметке «Пришёл». Если отметку снять, баллы вернутся обратно.</p>
   <?php else: ?>
-    <div class="empty"><b>На мероприятие пока никто не записан</b>Записи появятся здесь автоматически.</div>
+    <div class="empty"><?= icon('users') ?><b>Пока никто не записан</b>Записи волонтёров появятся здесь автоматически.</div>
   <?php endif; ?>
-</div>
-
-<p><a href="<?= url('admin/events.php') ?>" class="btn btn-outline">← К списку мероприятий</a></p>
+</section>
+<form method="post" id="finishForm" hidden><?= csrfField() ?><input type="hidden" name="action" value="finish"></form>
 
 <?php require __DIR__ . '/../includes/panel_footer.php'; ?>

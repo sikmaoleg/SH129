@@ -488,6 +488,51 @@ function newsExcerpt(array $n, int $len = 160): string
     return mb_strimwidth($text, 0, $len, '…');
 }
 
+/** Понятное название действия из журнала: [текст, иконка, оттенок]. */
+function actionLabel(string $action): array
+{
+    return [
+        'login'                    => ['Вход в панель', 'sign-in', ''],
+        'logout'                   => ['Выход', 'sign-out', ''],
+        'register'                 => ['Заявка на вступление', 'user-plus', 'info'],
+        'user_approve'             => ['Заявка одобрена', 'check-circle', 'ok'],
+        'user_reject'              => ['Заявка отклонена', 'prohibit', ''],
+        'user_block'               => ['Доступ закрыт', 'prohibit', 'warn'],
+        'user_unblock'             => ['Доступ восстановлен', 'check-circle', 'ok'],
+        'user_role'                => ['Изменена роль', 'shield-check', ''],
+        'user_position'            => ['Изменена позиция', 'users', ''],
+        'profile_update'           => ['Обновлён профиль', 'user-circle', ''],
+        'profile_update_by_admin'  => ['Профиль изменён администратором', 'pencil', ''],
+        'password_change'          => ['Смена пароля', 'key', ''],
+        'avatar_update'            => ['Новое фото профиля', 'image', ''],
+        'avatar_remove'            => ['Фото профиля удалено', 'image', ''],
+        'mger_joined_update'       => ['Изменена дата вступления', 'calendar', ''],
+        'coordinator_notes_update' => ['Изменена заметка', 'pencil', ''],
+        'event_create'             => ['Создано мероприятие', 'calendar-check', 'info'],
+        'event_update'             => ['Изменено мероприятие', 'calendar-check', ''],
+        'event_delete'             => ['Удалено мероприятие', 'trash', ''],
+        'event_finish'             => ['Мероприятие завершено', 'check-circle', 'ok'],
+        'event_signup'             => ['Запись на мероприятие', 'calendar-plus', 'info'],
+        'event_cancel'             => ['Отмена записи', 'undo', ''],
+        'attendance_mark'          => ['Отмечено участие', 'list-checks', 'ok'],
+        'points_manual'            => ['Начислены баллы', 'star', 'ok'],
+        'badge_create'             => ['Создано достижение', 'medal', ''],
+        'badge_delete'             => ['Удалено достижение', 'trash', ''],
+        'badge_award'              => ['Выдано достижение', 'medal', 'ok'],
+        'badge_revoke'             => ['Снято достижение', 'undo', ''],
+        'news_create'              => ['Опубликована новость', 'newspaper', 'info'],
+        'news_update'              => ['Изменена новость', 'newspaper', ''],
+        'news_delete'              => ['Удалена новость', 'trash', ''],
+        'hero_slide_create'        => ['Фото добавлено на главную', 'image', ''],
+        'hero_slide_delete'        => ['Фото убрано с главной', 'image', ''],
+        'hero_slide_reorder'       => ['Изменён порядок фото', 'image', ''],
+        'honor_update'             => ['Обновлена доска почёта', 'crown', ''],
+        'settings_update'          => ['Изменены настройки сайта', 'gear', ''],
+        'telegram_settings_update' => ['Изменены настройки Telegram', 'telegram', ''],
+        'logs_cleanup'             => ['Очищен журнал', 'trash', ''],
+    ][$action] ?? [$action, 'clipboard', ''];
+}
+
 // ---------------------------------------------------------------------
 // Роли (организационные позиции) волонтёров
 // ---------------------------------------------------------------------
@@ -563,4 +608,5 @@ function logAction(string $action, ?string $entity = null, ?int $entityId = null
     ]);
 }
 
+require_once __DIR__ . '/icons.php';
 require_once __DIR__ . '/auth.php';

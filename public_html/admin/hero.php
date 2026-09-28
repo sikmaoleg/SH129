@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('error', $file['error'] === UPLOAD_ERR_INI_SIZE || $file['error'] === UPLOAD_ERR_FORM_SIZE
                 ? 'Файл слишком большой.' : 'Не удалось загрузить файл. Попробуйте ещё раз.');
         } elseif ($file['size'] > 50 * 1024 * 1024) {
-            flash('error', 'Файл слишком большой — до 50 МБ.');
+            flash('error', 'Файл слишком большой: можно до 50 МБ.');
         } else {
             $filename = resizeAndSaveImage($file['tmp_name'], 'hero', 1800);
             if (!$filename) {
@@ -48,6 +48,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             logAction('hero_slide_delete', 'hero_slide', $id);
             flash('info', 'Фото удалено.');
         }
+    } elseif ($action === 'reorder') {
+        // Новый порядок после перетаскивания: список id сверху вниз
+        $order = array_map('intval', (array)($_POST['order'] ?? []));
+        foreach (array_values($order) as $i => $id) {
+            q('UPDATE hero_slides SET sort = ? WHERE id = ?', [($i + 1) * 10, $id]);
+        }
+        logAction('hero_slide_reorder', 'hero_slide');
+        if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'fetch') {
+            header('Content-Type: application/json; charset=utf-8');
+            exit('{"ok":true}');
+        }
+        flash('success', 'Порядок фото сохранён.');
+    } elseif ($action === 'caption') {
+        $id = (int)($_POST['id'] ?? 0);
+        $caption = trim((string)($_POST['caption'] ?? ''));
+        q('UPDATE hero_slides SET caption = ? WHERE id = ?', [$caption !== '' ? mb_substr($caption, 0, 190) : null, $id]);
+        flash('success', 'Подпись сохранена.');
     } elseif ($action === 'move') {
         $id  = (int)($_POST['id'] ?? 0);
         $dir = $_POST['dir'] ?? '';
@@ -57,8 +74,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($idx !== false) {
             $swapIdx = $dir === 'up' ? $idx - 1 : $idx + 1;
             if (isset($slides[$swapIdx])) {
-                q('UPDATE hero_slides SET sort = ? WHERE id = ?', [$slides[$swapIdx]['sort'], $slides[$idx]['id']]);
-                q('UPDATE hero_slides SET sort = ? WHERE id = ?', [$slides[$idx]['sort'], $slides[$swapIdx]['id']]);
+                [$ids[$idx], $ids[$swapIdx]] = [$ids[$swapIdx], $ids[$idx]];
+                foreach ($ids as $i => $sid) {
+                    q('UPDATE hero_slides SET sort = ? WHERE id = ?', [($i + 1) * 10, $sid]);
+                }
             }
         }
     }
@@ -67,74 +86,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $slides = fetchAll('SELECT * FROM hero_slides ORDER BY sort ASC, id ASC');
 
+$panelLead = 'Снимки сменяют друг друга на первом экране сайта, а четвёртый показывается в блоке «Часть большой команды». Перетащи карточку или используй стрелки, чтобы поменять порядок.';
+
 require __DIR__ . '/../includes/panel_header.php';
 ?>
 
-<div class="card">
-  <div class="card-head"><div><h2>Добавить фото</h2><p>Показывается в слайдере на главной странице сайта.</p></div></div>
-  <div class="card-body">
-    <form method="post" enctype="multipart/form-data" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
-      <?= csrfField() ?>
-      <input type="hidden" name="action" value="create">
-      <div class="field" style="flex:1;min-width:220px;margin:0;">
-        <label for="image">Файл</label>
-        <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/webp" required>
-      </div>
-      <div class="field" style="flex:1;min-width:220px;margin:0;">
-        <label for="caption">Подпись (необязательно)</label>
-        <input type="text" id="caption" name="caption" maxlength="190" placeholder="Например: Городское шествие">
-      </div>
-      <button type="submit" class="btn btn-primary">Добавить</button>
-    </form>
-    <div class="hint" style="margin-top:10px;">JPG, PNG или WEBP, до 50 МБ. Пропорции не обрезаются — слишком большие фото только уменьшаются.</div>
+<form method="post" enctype="multipart/form-data" class="upload-row">
+  <?= csrfField() ?>
+  <input type="hidden" name="action" value="create">
+  <label class="drop" id="drop">
+    <?= icon('upload') ?><b>Выбери фото или перетащи его сюда</b><span class="muted">JPG, PNG или WEBP до 50 МБ. Лучше горизонтальные снимки.</span>
+    <input type="file" name="image" accept="image/jpeg,image/png,image/webp" required id="heroFile">
+    <span class="file-name" id="heroFileName"></span>
+  </label>
+  <div class="upload-side">
+    <div class="field"><label for="caption">Подпись</label><input type="text" id="caption" name="caption" maxlength="190" placeholder="Например: субботник в парке"><span class="hint">Видна как описание фото для незрячих и в галерее.</span></div>
+    <button type="submit" class="btn btn-accent btn-block"><?= icon('plus') ?>Добавить фото</button>
   </div>
-</div>
+</form>
 
-<div class="card">
-  <div class="card-head"><div><h2>Слайды — <?= count($slides) ?></h2><p>Порядок показа сверху вниз, начиная с первого.</p></div></div>
-  <?php if ($slides): ?>
-    <div class="card-body card-body-flush table-wrap">
-      <table class="data cards">
-        <thead><tr><th style="width:120px;">Фото</th><th>Подпись</th><th style="width:140px;">Порядок</th><th style="width:100px;">Действия</th></tr></thead>
-        <tbody>
-          <?php foreach ($slides as $i => $s): ?>
-            <tr>
-              <td data-label="Фото"><img src="<?= url($s['image']) ?>" alt="" style="width:96px;height:64px;object-fit:cover;border-radius:8px;"></td>
-              <td data-label="Подпись"><?= e($s['caption'] ?: '—') ?></td>
-              <td data-label="Порядок">
-                <div style="display:flex;gap:6px;">
-                  <form method="post" style="margin:0;">
-                    <?= csrfField() ?>
-                    <input type="hidden" name="action" value="move">
-                    <input type="hidden" name="id" value="<?= (int)$s['id'] ?>">
-                    <input type="hidden" name="dir" value="up">
-                    <button type="submit" class="btn btn-outline btn-sm" <?= $i === 0 ? 'disabled' : '' ?>>↑</button>
-                  </form>
-                  <form method="post" style="margin:0;">
-                    <?= csrfField() ?>
-                    <input type="hidden" name="action" value="move">
-                    <input type="hidden" name="id" value="<?= (int)$s['id'] ?>">
-                    <input type="hidden" name="dir" value="down">
-                    <button type="submit" class="btn btn-outline btn-sm" <?= $i === count($slides) - 1 ? 'disabled' : '' ?>>↓</button>
-                  </form>
-                </div>
-              </td>
-              <td data-label="Действия">
-                <form method="post" style="margin:0;">
-                  <?= csrfField() ?>
-                  <input type="hidden" name="action" value="delete">
-                  <input type="hidden" name="id" value="<?= (int)$s['id'] ?>">
-                  <button type="submit" class="btn btn-outline btn-sm" data-confirm="Убрать это фото из слайдера?">Удалить</button>
-                </form>
-              </td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
-  <?php else: ?>
-    <div class="empty"><b>Слайдер пуст</b>Добавьте хотя бы одно фото — иначе на главной не будет фотоблока.</div>
-  <?php endif; ?>
-</div>
+<?php if ($slides): ?>
+  <div class="slides" id="slides" data-reorder-url="<?= url('admin/hero.php') ?>" data-csrf="<?= e(csrfToken()) ?>">
+    <?php foreach ($slides as $i => $sl): ?>
+      <article class="slide" draggable="true" data-id="<?= (int)$sl['id'] ?>">
+        <div class="slide-img"><img src="<?= url($sl['image']) ?>" alt="<?= e($sl['caption'] ?? '') ?>" loading="lazy"><span class="slide-n"><?= $i + 1 ?></span></div>
+        <div class="slide-b">
+          <span class="drag" title="Перетащить" aria-hidden="true"><?= icon('grip') ?></span>
+          <form method="post" class="slide-cap">
+            <?= csrfField() ?>
+            <input type="hidden" name="action" value="caption">
+            <input type="hidden" name="id" value="<?= (int)$sl['id'] ?>">
+            <label class="sr" for="cap<?= (int)$sl['id'] ?>">Подпись</label>
+            <input class="input" id="cap<?= (int)$sl['id'] ?>" name="caption" value="<?= e($sl['caption'] ?? '') ?>" placeholder="Без подписи" onchange="this.form.submit()">
+          </form>
+        </div>
+        <div class="slide-act">
+          <form method="post" class="inline-form"><?= csrfField() ?><input type="hidden" name="action" value="move"><input type="hidden" name="id" value="<?= (int)$sl['id'] ?>"><input type="hidden" name="dir" value="up"><button class="menu-dots" <?= $i === 0 ? 'disabled' : '' ?> aria-label="Выше"><?= icon('arrow-up') ?></button></form>
+          <form method="post" class="inline-form"><?= csrfField() ?><input type="hidden" name="action" value="move"><input type="hidden" name="id" value="<?= (int)$sl['id'] ?>"><input type="hidden" name="dir" value="down"><button class="menu-dots" <?= $i === count($slides) - 1 ? 'disabled' : '' ?> aria-label="Ниже"><?= icon('arrow-down') ?></button></form>
+          <span class="spacer"></span>
+          <form method="post" class="inline-form"><?= csrfField() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$sl['id'] ?>"><button class="menu-dots" data-confirm="Убрать это фото с главной?" aria-label="Удалить фото"><?= icon('trash') ?></button></form>
+        </div>
+      </article>
+    <?php endforeach; ?>
+  </div>
+<?php else: ?>
+  <section class="card"><div class="empty"><?= icon('image') ?><b>Фото пока нет</b>Пока здесь пусто, на главной показывается стандартный снимок команды.</div></section>
+<?php endif; ?>
 
 <?php require __DIR__ . '/../includes/panel_footer.php'; ?>

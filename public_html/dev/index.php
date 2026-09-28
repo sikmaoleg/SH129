@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 requireDev();
 
 $panelSection = 'dev';
-$panelTitle   = 'Состояние системы';
+$panelTitle   = 'Состояние';
 $activeItem   = 'index';
 
 global $config;
@@ -23,7 +23,7 @@ $httpsOk = !empty($_SERVER['HTTPS']);
 $checks[] = ['HTTPS', $httpsOk ? 'включён' : 'выключен', $httpsOk, 'Без HTTPS пароли передаются открыто'];
 
 $debugOff = empty($config['debug']);
-$checks[] = ['Режим отладки', $debugOff ? 'выключен' : 'ВКЛЮЧЁН', $debugOff, 'На боевом сайте debug должен быть false'];
+$checks[] = ['Режим отладки', $debugOff ? 'выключен' : 'включён', $debugOff, 'На боевом сайте debug должен быть false'];
 
 $uploadsDir = APP_ROOT . '/uploads';
 $writable   = is_dir($uploadsDir) && is_writable($uploadsDir);
@@ -36,15 +36,15 @@ $checks[] = [
     'Хранилище сессий',
     $sessionOk ? ($sessionUsed ? 'своя папка, используется' : 'своя папка есть, но не используется') : 'нет доступа на запись',
     $sessionOk && $sessionUsed,
-    'Без этого сайт может использовать общую папку сессий хостинга — вход будет постоянно слетать, если она недоступна для записи. Права 755 на storage/sessions',
+    'Без своей папки сайт пишет сессии в общую папку хостинга, и вход может слетать. Нужны права 755 на storage/sessions',
 ];
 
 $installerGone = !is_dir(APP_ROOT . '/install');
-$checks[] = ['Установщик удалён', $installerGone ? 'да' : 'НЕТ — папка /install на месте', $installerGone,
+$checks[] = ['Установщик удалён', $installerGone ? 'да' : 'нет, папка /install на месте', $installerGone,
              'После установки папку /install нужно удалить с сервера'];
 
 $defaultKey = ($config['dev_key'] ?? '') === 'change-me-please';
-$checks[] = ['Ключ dev_key изменён', $defaultKey ? 'НЕТ — стоит значение по умолчанию' : 'да', !$defaultKey, ''];
+$checks[] = ['Ключ dev_key изменён', $defaultKey ? 'нет, стоит значение по умолчанию' : 'да', !$defaultKey, ''];
 
 // --- Данные базы ---
 $dbVersion = fetchValue('SELECT VERSION()');
@@ -53,70 +53,79 @@ $tables = fetchAll('SELECT TABLE_NAME AS t, TABLE_ROWS AS r FROM information_sch
 
 $counts = [
     'Пользователей'      => [(int)fetchValue('SELECT COUNT(*) FROM users'), 'users'],
-    'Ждут одобрения'     => [(int)fetchValue("SELECT COUNT(*) FROM users WHERE status='pending'"), 'user-plus'],
-    'Мероприятий'        => [(int)fetchValue('SELECT COUNT(*) FROM events'), 'calendar'],
-    'Записей на события' => [(int)fetchValue('SELECT COUNT(*) FROM event_registrations'), 'clipboard'],
-    'Начислений баллов'  => [(int)fetchValue('SELECT COUNT(*) FROM point_transactions'), 'medal'],
-    'Записей в журнале'  => [(int)fetchValue('SELECT COUNT(*) FROM audit_log'), 'target'],
+    'Ждут одобрения'     => [(int)fetchValue("SELECT COUNT(*) FROM users WHERE status='pending'"), 'hourglass'],
+    'Мероприятий'        => [(int)fetchValue('SELECT COUNT(*) FROM events'), 'calendar-check'],
+    'Записей на события' => [(int)fetchValue('SELECT COUNT(*) FROM event_registrations'), 'clipboard-text'],
+    'Начислений баллов'  => [(int)fetchValue('SELECT COUNT(*) FROM point_transactions'), 'star'],
+    'Записей в журнале'  => [(int)fetchValue('SELECT COUNT(*) FROM audit_log'), 'list-checks'],
 ];
+
+$problems = array_values(array_filter($checks, fn($c) => !$c[2]));
+$okChecks = array_values(array_filter($checks, fn($c) => $c[2]));
+$panelLead = $problems
+    ? 'Есть что поправить: ' . count($problems) . ' ' . plural(count($problems), 'проверка', 'проверки', 'проверок') . ' не пройдено. Проблемы показаны сверху.'
+    : 'Все проверки пройдены, сайт работает штатно.';
 
 require __DIR__ . '/../includes/panel_header.php';
 ?>
 
-<div class="kpi-grid">
+<div class="kpis">
   <?php foreach (array_slice($counts, 0, 4, true) as $label => [$value, $ic]): ?>
-    <div class="kpi"><div class="kpi-top"><span><?= e($label) ?></span><?= icon($ic) ?></div><b><?= $value ?></b></div>
+    <div class="kpi"><div class="kpi-l"><span><?= e($label) ?></span><?= icon($ic) ?></div><div class="kpi-v num"><?= number_format($value, 0, ',', ' ') ?></div></div>
   <?php endforeach; ?>
 </div>
 
-<div class="grid-2">
-  <div class="card">
-    <div class="card-head"><div><h2>Проверка окружения</h2><p>Что важно поправить перед публикацией</p></div></div>
-    <div class="card-body card-body-flush table-wrap">
-      <table class="data">
-        <tbody>
-          <?php foreach ($checks as [$label, $value, $ok, $note]): ?>
-            <tr>
-              <td style="width:44%;"><?= e($label) ?>
-                <?php if (!$ok && $note): ?><div style="font-size:.79rem;color:var(--muted);"><?= e($note) ?></div><?php endif; ?></td>
-              <td class="mono"><?= e($value) ?></td>
-              <td style="width:1%;"><span class="<?= $ok ? 'status-ok' : 'status-bad' ?>"><?= $ok ? icon('check') : icon('alert') ?></span></td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
-  </div>
+<div class="grid g-main">
+  <section class="card">
+    <div class="card-h"><div><h2>Проверки</h2><p>Что важно для боевого сайта</p></div><?= $problems ? '<span class="chip warn">' . icon('alert') . count($problems) . ' ' . plural(count($problems), 'проблема', 'проблемы', 'проблем') . '</span>' : '<span class="chip ok">' . icon('check') . 'Всё в порядке</span>' ?></div>
+    <ul class="checks">
+      <?php foreach (array_merge($problems, $okChecks) as [$label, $value, $ok, $note]): ?>
+        <li>
+          <span class="st <?= $ok ? 'ok' : 'warn' ?>"><?= $ok ? icon('check') : icon('alert') ?></span>
+          <div><b><?= e($label) ?></b><?php if (!$ok && $note): ?><small><?= e($note) ?></small><?php endif; ?></div>
+          <span class="<?= $ok ? 'muted' : 'chip warn' ?>" style="font-size:13.5px"><?= e($value) ?></span>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+  </section>
 
-  <div class="card">
-    <div class="card-head"><div><h2>Окружение</h2></div></div>
-    <div class="card-body">
-      <table class="kv">
-        <tr><th>PHP</th><td><?= e(PHP_VERSION) ?></td></tr>
-        <tr><th>Сервер</th><td><?= e($_SERVER['SERVER_SOFTWARE'] ?? 'неизвестно') ?></td></tr>
-        <tr><th>MySQL</th><td><?= e((string)$dbVersion) ?></td></tr>
-        <tr><th>База</th><td><?= e($config['db']['name']) ?></td></tr>
-        <tr><th>Часовой пояс</th><td><?= e(date_default_timezone_get()) ?> (<?= date('d.m.Y H:i') ?>)</td></tr>
-        <tr><th>Корень сайта</th><td><?= e(APP_ROOT) ?></td></tr>
-        <tr><th>Лимит памяти</th><td><?= e(ini_get('memory_limit')) ?></td></tr>
-        <tr><th>Макс. размер загрузки</th><td><?= e(ini_get('upload_max_filesize')) ?></td></tr>
-      </table>
-    </div>
+  <div class="stack">
+    <section class="card">
+      <div class="card-h"><div><h2>Окружение</h2></div></div>
+      <dl class="env">
+        <div><dt>PHP</dt><dd><?= e(PHP_VERSION) ?></dd></div>
+        <div><dt>База данных</dt><dd><?= e((string)$dbVersion) ?></dd></div>
+        <div><dt>Сервер</dt><dd><?= e($_SERVER['SERVER_SOFTWARE'] ?? 'неизвестно') ?></dd></div>
+        <div><dt>Имя базы</dt><dd><?= e($config['db']['name']) ?></dd></div>
+        <div><dt>Часовой пояс</dt><dd><?= e(date_default_timezone_get()) ?>, <?= date('d.m.Y H:i') ?></dd></div>
+        <div><dt>Лимит памяти</dt><dd><?= e(ini_get('memory_limit')) ?></dd></div>
+        <div><dt>Размер загрузки</dt><dd>до <?= e(ini_get('upload_max_filesize')) ?></dd></div>
+        <div><dt>Корень сайта</dt><dd class="mono"><?= e(APP_ROOT) ?></dd></div>
+      </dl>
+    </section>
+    <section class="card">
+      <div class="card-h"><div><h2>Ещё</h2></div></div>
+      <ul class="list">
+        <?php foreach (array_slice($counts, 4, null, true) as $label => [$value, $ic]): ?>
+          <li><span class="dot"><?= icon($ic) ?></span><div class="grow"><b><?= e($label) ?></b></div><span class="num"><?= number_format($value, 0, ',', ' ') ?></span></li>
+        <?php endforeach; ?>
+      </ul>
+    </section>
   </div>
 </div>
 
-<div class="card">
-  <div class="card-head"><div><h2>Таблицы базы данных</h2><p>Количество строк приблизительное — так его отдаёт MySQL</p></div></div>
-  <div class="card-body card-body-flush table-wrap">
-    <table class="data">
-      <thead><tr><th>Таблица</th><th>Строк (оценка)</th></tr></thead>
+<section class="card" style="margin-top:18px">
+  <div class="card-h"><div><h2>Таблицы базы</h2><p>Количество строк приблизительное, так его отдаёт MySQL</p></div><a class="btn btn-line btn-sm" href="<?= url('dev/database.php') ?>"><?= icon('database') ?>Подробнее</a></div>
+  <div class="table-wrap">
+    <table class="data cards">
+      <thead><tr><th>Таблица</th><th style="text-align:right">Строк</th></tr></thead>
       <tbody>
         <?php foreach ($tables as $t): ?>
-          <tr><td class="mono"><?= e($t['t']) ?></td><td class="num"><?= (int)$t['r'] ?></td></tr>
+          <tr><td class="mono"><?= e($t['t']) ?></td><td data-label="Строк" class="num" style="text-align:right"><?= number_format((int)$t['r'], 0, ',', ' ') ?></td></tr>
         <?php endforeach; ?>
       </tbody>
     </table>
   </div>
-</div>
+</section>
 
 <?php require __DIR__ . '/../includes/panel_footer.php'; ?>

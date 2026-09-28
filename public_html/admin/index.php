@@ -13,11 +13,11 @@ $needReview = (int)fetchValue("SELECT COUNT(*) FROM events WHERE status='publish
 
 $latestApps = fetchAll(
     "SELECT id, last_name, first_name, email, phone, created_at
-     FROM users WHERE status='pending' ORDER BY created_at ASC LIMIT 5"
+     , birth_date, school FROM users WHERE status='pending' ORDER BY created_at ASC LIMIT 5"
 );
 
 $soon = fetchAll(
-    "SELECT e.id, e.title, e.starts_at,
+    "SELECT e.id, e.title, e.starts_at, e.location,
             (SELECT COUNT(*) FROM event_registrations r WHERE r.event_id=e.id AND r.status<>'cancelled') AS taken,
             e.capacity
      FROM events e WHERE e.status='published' AND e.starts_at >= NOW()
@@ -25,94 +25,94 @@ $soon = fetchAll(
 );
 
 $recent = fetchAll(
-    "SELECT a.action, a.entity, a.created_at, u.last_name, u.first_name
+    "SELECT a.action, a.entity, a.entity_id, a.meta, a.created_at, u.last_name, u.first_name
      FROM audit_log a LEFT JOIN users u ON u.id = a.user_id
      ORDER BY a.created_at DESC LIMIT 8"
 );
 
+$firstReview = $needReview > 0 ? fetchOne("SELECT id, title, starts_at FROM events WHERE status='published' AND starts_at < NOW() ORDER BY starts_at ASC LIMIT 1") : null;
+$newThisMonth = (int)fetchValue("SELECT COUNT(*) FROM users WHERE status='approved' AND role='volunteer' AND approved_at >= DATE_FORMAT(NOW(), '%Y-%m-01')");
+$wd = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+$weekdays  = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+$panelLead = e($weekdays[(int)date('w')] . ', ' . ruDate(date('Y-m-d'))) . '. Вот что ждёт решения.';
+
 require __DIR__ . '/../includes/panel_header.php';
 ?>
 
-<div class="kpi-grid">
-  <div class="kpi <?= $pending > 0 ? 'is-alert' : '' ?>">
-    <div class="kpi-top"><span>Заявки на рассмотрении</span><?= icon('user-plus') ?></div><b><?= $pending ?></b>
-    <a href="<?= url('admin/applications.php') ?>"><?= icon('arrow-right') ?>Проверить</a>
-  </div>
-  <div class="kpi"><div class="kpi-top"><span>Волонтёров в отделении</span><?= icon('users') ?></div><b><?= $approved ?></b><a href="<?= url('admin/users.php') ?>"><?= icon('arrow-right') ?>Список</a></div>
-  <div class="kpi"><div class="kpi-top"><span>Предстоящих мероприятий</span><?= icon('calendar') ?></div><b><?= $upcoming ?></b><a href="<?= url('admin/events.php') ?>"><?= icon('arrow-right') ?>Афиша</a></div>
-  <div class="kpi <?= $needReview > 0 ? 'is-alert' : '' ?>">
-    <div class="kpi-top"><span>Ждут отметки участия</span><?= icon('clipboard') ?></div><b><?= $needReview ?></b>
-    <a href="<?= url('admin/events.php?filter=past') ?>"><?= icon('arrow-right') ?>Отметить</a>
-  </div>
+<div class="kpis">
+  <a class="kpi <?= $pending > 0 ? 'attn' : '' ?>" href="<?= url('admin/applications.php') ?>">
+    <div class="kpi-l"><span>Заявки на рассмотрении</span><?= icon('user-plus') ?></div>
+    <div class="kpi-v"><?= $pending ?></div>
+    <div class="kpi-d"><?= $pending ? 'нажми, чтобы разобрать' : 'все заявки разобраны' ?></div>
+  </a>
+  <a class="kpi" href="<?= url('admin/users.php') ?>">
+    <div class="kpi-l"><span>Волонтёров в отделении</span><?= icon('users') ?></div>
+    <div class="kpi-v"><?= $approved ?></div>
+    <div class="kpi-d"><?php if ($newThisMonth): ?><span class="up">+<?= $newThisMonth ?></span> за этот месяц<?php else: ?>одобренные учётные записи<?php endif; ?></div>
+  </a>
+  <a class="kpi" href="<?= url('admin/events.php') ?>">
+    <div class="kpi-l"><span>Предстоящих мероприятий</span><?= icon('calendar-check') ?></div>
+    <div class="kpi-v"><?= $upcoming ?></div>
+    <div class="kpi-d"><?= $soon ? 'ближайшее ' . e(ruDate($soon[0]['starts_at'])) : 'афиша пуста' ?></div>
+  </a>
+  <a class="kpi <?= $needReview > 0 ? 'attn' : '' ?>" href="<?= url($firstReview ? 'admin/attendance.php?id=' . (int)$firstReview['id'] : 'admin/events.php?filter=past') ?>">
+    <div class="kpi-l"><span>Ждут отметки участия</span><?= icon('list-checks') ?></div>
+    <div class="kpi-v"><?= $needReview ?></div>
+    <div class="kpi-d"><?= $firstReview ? '«' . e(mb_strimwidth($firstReview['title'], 0, 34, '…')) . '»' : 'всё отмечено' ?></div>
+  </a>
 </div>
 
-<div class="grid-2">
-  <div class="card">
-    <div class="card-head">
-      <div><h2>Новые заявки</h2><p>Ожидают одобрения администратором</p></div>
-      <a href="<?= url('admin/applications.php') ?>" class="btn btn-outline btn-sm">Все</a>
-    </div>
-    <?php if ($latestApps): ?>
-      <div class="card-body card-body-flush table-wrap">
-        <table class="data">
-          <tbody>
-            <?php foreach ($latestApps as $a): ?>
-              <tr>
-                <td><b><?= e($a['last_name'].' '.$a['first_name']) ?></b>
-                    <div style="font-size:.8rem;color:var(--muted);"><?= e($a['email']) ?> · <?= e($a['phone']) ?></div></td>
-                <td style="white-space:nowrap;color:var(--muted);font-size:.83rem;"><?= e(ruDate($a['created_at'])) ?></td>
-                <td><a href="<?= url('admin/applications.php#user-'.(int)$a['id']) ?>" class="btn btn-primary btn-sm">Открыть</a></td>
-              </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
-      </div>
-    <?php else: ?>
-      <div class="empty"><b>Новых заявок нет</b>Все анкеты обработаны.</div>
-    <?php endif; ?>
-  </div>
-
-  <div class="card">
-    <div class="card-head">
-      <div><h2>Ближайшие мероприятия</h2></div>
-      <a href="<?= url('admin/events.php') ?>" class="btn btn-outline btn-sm">Все</a>
-    </div>
+<div class="grid g-main">
+  <section class="card">
+    <div class="card-h"><div><h2>Ближайшие мероприятия</h2><p>Кто записался и сколько осталось мест</p></div><a class="btn btn-line btn-sm" href="<?= url('admin/events.php') ?>">Все</a></div>
     <?php if ($soon): ?>
-      <div class="card-body card-body-flush table-wrap">
-        <table class="data">
-          <tbody>
-            <?php foreach ($soon as $ev): ?>
-              <tr>
-                <td><?= e($ev['title']) ?><div style="font-size:.8rem;color:var(--muted);"><?= e(ruDate($ev['starts_at'], true)) ?></div></td>
-                <td class="num" style="white-space:nowrap;"><?= (int)$ev['taken'] ?><?= (int)$ev['capacity'] > 0 ? ' / '.(int)$ev['capacity'] : '' ?></td>
-                <td><a href="<?= url('admin/attendance.php?id='.(int)$ev['id']) ?>" class="btn btn-outline btn-sm">Записи</a></td>
-              </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
-      </div>
+      <ul class="list">
+        <?php foreach ($soon as $ev): $ts = strtotime($ev['starts_at']); $cap = (int)$ev['capacity']; $taken = (int)$ev['taken']; ?>
+          <li>
+            <div class="ev-date" style="border:0;padding:0;min-width:48px"><b style="font-size:34px"><?= date('j', $ts) ?></b><span><?= mb_strtolower(RU_MONTHS_SHORT[(int)date('n', $ts)]) ?>, <?= $wd[(int)date('w', $ts)] ?></span></div>
+            <div class="grow"><a href="<?= url('admin/attendance.php?id=' . (int)$ev['id']) ?>"><b><?= e($ev['title']) ?></b></a><small><?= date('H:i', $ts) ?><?= $ev['location'] ? ' · ' . e($ev['location']) : '' ?></small></div>
+            <?php if ($cap > 0): ?>
+              <div class="meter <?= $taken >= $cap ? 'full' : '' ?>"><div class="meter-t"><span><?= $taken >= $cap ? 'Мест нет' : 'Записались' ?></span><b class="num"><?= $taken ?> из <?= $cap ?></b></div><div class="meter-bar"><i style="width:<?= min(100, (int)round($taken / $cap * 100)) ?>%"></i></div></div>
+            <?php else: ?>
+              <span class="tag"><?= icon('users') ?><?= $taken ?> <?= plural($taken, 'запись', 'записи', 'записей') ?></span>
+            <?php endif; ?>
+          </li>
+        <?php endforeach; ?>
+      </ul>
     <?php else: ?>
-      <div class="empty"><b>Афиша пуста</b>Создайте первое мероприятие.</div>
+      <div class="empty"><?= icon('calendar-check') ?><b>Афиша пуста</b>Создай первое мероприятие.<a class="btn btn-accent btn-sm" href="<?= url('admin/events.php?new=1') ?>"><?= icon('plus') ?>Новое мероприятие</a></div>
     <?php endif; ?>
-  </div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><div><h2>Новые заявки</h2><p>Ожидают одобрения</p></div><a class="btn btn-line btn-sm" href="<?= url('admin/applications.php') ?>">Разобрать</a></div>
+    <?php if ($latestApps): ?>
+      <ul class="list">
+        <?php foreach ($latestApps as $a): $age = $a['birth_date'] ? (int)(new DateTime($a['birth_date']))->diff(new DateTime())->y : null; ?>
+          <li>
+            <span class="ava"><?= e(mb_substr($a['first_name'], 0, 1) . mb_substr($a['last_name'], 0, 1)) ?></span>
+            <div class="grow"><a href="<?= url('admin/applications.php?id=' . (int)$a['id']) ?>"><b><?= e($a['first_name'] . ' ' . $a['last_name']) ?></b></a><small><?= $age !== null ? $age . ' ' . plural($age, 'год', 'года', 'лет') : '' ?><?= $a['school'] ? ', ' . e($a['school']) : '' ?></small></div>
+            <small style="white-space:nowrap"><?= e(ruDate($a['created_at'])) ?></small>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+    <?php else: ?>
+      <div class="empty"><?= icon('check-circle') ?><b>Новых заявок нет</b>Все анкеты разобраны.</div>
+    <?php endif; ?>
+  </section>
 </div>
 
-<div class="card">
-  <div class="card-head"><div><h2>Последние действия</h2></div></div>
-  <div class="card-body card-body-flush table-wrap">
-    <table class="data">
-      <tbody>
-        <?php foreach ($recent as $r): ?>
-          <tr>
-            <td style="width:1%;white-space:nowrap;color:var(--muted);font-size:.83rem;"><?= e(ruDate($r['created_at'], true)) ?></td>
-            <td class="mono"><?= e($r['action']) ?></td>
-            <td style="color:var(--muted);"><?= e(trim(($r['last_name'] ?? '').' '.($r['first_name'] ?? '')) ?: 'система') ?></td>
-          </tr>
-        <?php endforeach; ?>
-        <?php if (!$recent): ?><tr><td colspan="3" style="text-align:center;color:var(--muted);padding:28px;">Записей пока нет</td></tr><?php endif; ?>
-      </tbody>
-    </table>
-  </div>
-</div>
+<section class="card" style="margin-top:18px">
+  <div class="card-h"><div><h2>Последние действия</h2><p>Кто и что менял в отделении</p></div><?php if (isDev()): ?><a class="btn btn-line btn-sm" href="<?= url('dev/logs.php') ?>">Весь журнал</a><?php endif; ?></div>
+  <?php if ($recent): ?>
+    <ul class="feed">
+      <?php foreach ($recent as $r): [$label, $ic, $kind] = actionLabel($r['action']); $who = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? '')); ?>
+        <li><span class="dot <?= e($kind) ?>"><?= icon($ic) ?></span><p><b><?= e($who !== '' ? $who : 'Система') ?></b> <span><?= e(mb_strtolower(mb_substr($label, 0, 1)) . mb_substr($label, 1)) ?></span></p><time><?= e(ruDate($r['created_at'], true)) ?></time></li>
+      <?php endforeach; ?>
+    </ul>
+  <?php else: ?>
+    <div class="empty"><b>Записей пока нет</b>Здесь появятся действия администраторов и волонтёров.</div>
+  <?php endif; ?>
+</section>
 
 <?php require __DIR__ . '/../includes/panel_footer.php'; ?>

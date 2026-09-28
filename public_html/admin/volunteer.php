@@ -10,7 +10,8 @@ if (!$v) {
 }
 
 $panelSection = 'admin';
-$panelTitle   = 'Карточка волонтёра';
+$panelTitle   = $v['first_name'] . ' ' . $v['last_name'];
+$panelCrumb   = ['Волонтёры', 'admin/users.php'];
 $activeItem   = 'users';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -118,174 +119,160 @@ foreach ($myBadgeIds as $r) {
 }
 $availableBadges = array_filter($allBadges, fn($b) => !isset($earnedBadges[(int)$b['id']]));
 
+$lvl      = levelFor((int)$v['points']);
+$attended = (int)fetchValue("SELECT COUNT(*) FROM event_registrations WHERE user_id = ? AND status = 'attended'", [$userId]);
+$ini      = mb_substr($v['first_name'], 0, 1) . mb_substr($v['last_name'], 0, 1);
+$tgOk     = $v['telegram'] && preg_match('/^@?[A-Za-z0-9_]{4,}$/', $v['telegram']);
+$panelLead = e(positionLabel($v['position'])) . ' · в организации с ' . e(ruDate(membershipDate($v)))
+    . ($v['status'] === 'blocked' ? ' · <b>заблокирован</b>' : '');
+$panelActions = ($v['phone'] ? '<a class="btn btn-line" href="tel:' . e(preg_replace('/[^\d+]/', '', $v['phone'])) . '">' . icon('phone') . 'Позвонить</a>' : '')
+    . ($tgOk ? '<a class="btn btn-line" href="https://t.me/' . e(ltrim($v['telegram'], '@')) . '" target="_blank" rel="noopener">' . icon('telegram') . 'Telegram</a>' : '')
+    . '<a class="btn btn-accent" href="' . url('admin/points.php?user_id=' . $userId) . '">' . icon('star') . 'Начислить баллы</a>';
+
 require __DIR__ . '/../includes/panel_header.php';
 ?>
 
-<div class="card">
-  <div class="card-head">
-    <div>
-      <h2><?= e($v['last_name'] . ' ' . $v['first_name'] . ' ' . $v['middle_name']) ?></h2>
-      <p><?= e(positionLabel($v['position'])) ?> · <?= (int)$v['points'] ?> <?= plural((int)$v['points'], 'балл', 'балла', 'баллов') ?> · в организации с <?= e(ruDate(membershipDate($v))) ?></p>
-    </div>
-    <a href="<?= url('admin/points.php?user_id=' . $userId) ?>" class="btn btn-outline btn-sm">Начислить баллы</a>
-  </div>
-  <div class="card-body">
-    <form method="post">
+<div class="kpis">
+  <div class="kpi"><div class="kpi-l"><span>Баллы</span><?= icon('star') ?></div><div class="kpi-v num"><?= number_format((int)$v['points'], 0, ',', ' ') ?></div><div class="kpi-d"><?= $lvl['next'] ? 'до уровня «' . e($lvl['next']['name']) . '» ' . (int)$lvl['to_next'] : 'максимальный уровень' ?></div></div>
+  <div class="kpi"><div class="kpi-l"><span>Уровень</span><?= icon('trophy') ?></div><div class="kpi-v" style="font-size:30px"><?= e($lvl['current']['name']) ?></div><div class="meter-bar" style="margin-top:6px"><i style="width:<?= (int)$lvl['progress'] ?>%"></i></div></div>
+  <div class="kpi"><div class="kpi-l"><span>Мероприятий</span><?= icon('calendar-check') ?></div><div class="kpi-v num"><?= $attended ?></div><div class="kpi-d">с отметкой «пришёл»</div></div>
+  <div class="kpi"><div class="kpi-l"><span>Достижений</span><?= icon('medal') ?></div><div class="kpi-v num"><?= count($earnedBadges) ?></div><div class="kpi-d">из <?= count($allBadges) ?></div></div>
+</div>
+
+<div class="grid g-main">
+  <section class="card">
+    <div class="card-h"><div><h2>Данные</h2><p>Администратор может поправить анкету за волонтёра</p></div></div>
+    <form method="post" class="card-b stack">
       <?= csrfField() ?>
       <input type="hidden" name="action" value="profile">
-      <div class="field-row">
-        <div class="field"><label for="last_name">Фамилия</label><input type="text" id="last_name" name="last_name" value="<?= e($v['last_name']) ?>" required></div>
-        <div class="field"><label for="first_name">Имя</label><input type="text" id="first_name" name="first_name" value="<?= e($v['first_name']) ?>" required></div>
+      <div class="frow">
+        <div class="field"><label for="last_name">Фамилия</label><input class="input" type="text" id="last_name" name="last_name" value="<?= e($v['last_name']) ?>" required></div>
+        <div class="field"><label for="first_name">Имя</label><input class="input" type="text" id="first_name" name="first_name" value="<?= e($v['first_name']) ?>" required></div>
       </div>
-      <div class="field-row">
-        <div class="field"><label for="middle_name">Отчество</label><input type="text" id="middle_name" name="middle_name" value="<?= e($v['middle_name']) ?>"></div>
-        <div class="field"><label for="birth_date">Дата рождения</label><input type="date" id="birth_date" name="birth_date" value="<?= e($v['birth_date'] ?? '') ?>"></div>
+      <div class="frow">
+        <div class="field"><label for="middle_name">Отчество</label><input class="input" type="text" id="middle_name" name="middle_name" value="<?= e($v['middle_name']) ?>"></div>
+        <div class="field"><label for="birth_date">Дата рождения</label><input class="input" type="date" id="birth_date" name="birth_date" value="<?= e($v['birth_date'] ?? '') ?>"></div>
       </div>
-      <div class="field-row">
-        <div class="field"><label for="email">Электронная почта</label><input type="email" id="email" name="email" value="<?= e($v['email']) ?>" required></div>
-        <div class="field"><label for="phone">Телефон</label><input type="tel" id="phone" name="phone" value="<?= e($v['phone']) ?>"></div>
+      <div class="frow">
+        <div class="field"><label for="email">Электронная почта</label><input class="input" type="email" id="email" name="email" value="<?= e($v['email']) ?>" required></div>
+        <div class="field"><label for="phone">Телефон</label><input class="input" type="tel" id="phone" name="phone" value="<?= e($v['phone']) ?>"></div>
       </div>
-      <div class="field-row">
-        <div class="field"><label for="vk">ВКонтакте</label><input type="text" id="vk" name="vk" value="<?= e($v['vk']) ?>"></div>
-        <div class="field"><label for="telegram">Telegram</label><input type="text" id="telegram" name="telegram" value="<?= e($v['telegram']) ?>"></div>
+      <div class="frow">
+        <div class="field"><label for="vk">ВКонтакте</label><input class="input" type="text" id="vk" name="vk" value="<?= e($v['vk']) ?>"></div>
+        <div class="field"><label for="telegram">Telegram</label><input class="input" type="text" id="telegram" name="telegram" value="<?= e($v['telegram']) ?>"></div>
       </div>
-      <div class="field"><label for="school">Школа, колледж или работа</label><input type="text" id="school" name="school" value="<?= e($v['school']) ?>"></div>
-      <div class="field"><label for="about">О себе</label><textarea id="about" name="about"><?= e($v['about']) ?></textarea></div>
-      <button type="submit" class="btn btn-primary">Сохранить данные</button>
+      <div class="field"><label for="school">Школа, колледж или работа</label><input class="input" type="text" id="school" name="school" value="<?= e($v['school']) ?>"></div>
+      <div class="field"><label for="about">О себе</label><textarea class="textarea" id="about" name="about"><?= e($v['about']) ?></textarea></div>
+      <div><button type="submit" class="btn btn-accent">Сохранить данные</button></div>
     </form>
-  </div>
-</div>
+  </section>
 
-<div class="card">
-  <div class="card-head"><div><h2>Фото профиля</h2><p>Загрузить или заменить фото может администратор или разработчик.</p></div></div>
-  <div class="card-body" style="display:flex;gap:22px;align-items:center;flex-wrap:wrap;">
-    <div class="vk-avatar" style="margin:0;flex:none;">
-      <?php if ($v['avatar']): ?>
-        <img src="<?= url('uploads/avatars/' . $v['avatar']) ?>" alt="">
-      <?php else: ?>
-        <span><?= e(mb_substr($v['first_name'], 0, 1) . mb_substr($v['last_name'], 0, 1)) ?></span>
-      <?php endif; ?>
-    </div>
-    <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:10px;">
-      <form method="post" enctype="multipart/form-data" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-        <?= csrfField() ?>
-        <input type="hidden" name="action" value="avatar_upload">
-        <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp" required>
-        <button type="submit" class="btn btn-primary btn-sm">Загрузить</button>
-      </form>
-      <?php if ($v['avatar']): ?>
-        <form method="post" style="margin:0;">
-          <?= csrfField() ?>
-          <input type="hidden" name="action" value="avatar_remove">
-          <button type="submit" class="btn btn-outline btn-sm" data-confirm="Удалить фото профиля волонтёра?">Удалить фото</button>
-        </form>
-      <?php endif; ?>
-      <div class="hint">JPG, PNG или WEBP, до 50 МБ. Фото обрежется по центру до квадрата.</div>
-    </div>
-  </div>
-</div>
+  <div class="stack">
+    <section class="card">
+      <div class="card-h"><div><h2>Фото</h2><p>Обрежется по центру до квадрата</p></div></div>
+      <div class="card-b">
+        <div class="row" style="align-items:flex-start;gap:18px">
+          <span class="ava lg"><?php if ($v['avatar']): ?><img src="<?= url('uploads/avatars/' . $v['avatar']) ?>" alt=""><?php else: ?><?= e($ini) ?><?php endif; ?></span>
+          <div class="stack" style="gap:10px;min-width:0;flex:1">
+            <form method="post" enctype="multipart/form-data" class="stack" style="gap:10px">
+              <?= csrfField() ?>
+              <input type="hidden" name="action" value="avatar_upload">
+              <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp" required aria-label="Файл с фото" style="font-size:13.5px;max-width:100%">
+              <div><button type="submit" class="btn btn-line btn-sm"><?= icon('upload') ?>Загрузить</button></div>
+            </form>
+            <?php if ($v['avatar']): ?>
+              <form method="post" style="margin:0">
+                <?= csrfField() ?>
+                <input type="hidden" name="action" value="avatar_remove">
+                <button type="submit" class="btn btn-ghost btn-sm" data-confirm="Удалить фото профиля волонтёра?"><?= icon('trash') ?>Удалить фото</button>
+              </form>
+            <?php endif; ?>
+            <span class="hint">JPG, PNG или WEBP, до 50 МБ.</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
-<div class="grid-2">
-  <div class="card">
-    <div class="card-head"><div><h2>Дата вступления в МГЕР</h2><p>Видна и редактируется только администратором и разработчиком.</p></div></div>
-    <div class="card-body">
-      <form method="post">
+    <section class="card">
+      <div class="card-h"><div><h2>Вступление в МГЕР</h2><p>Видят только администраторы</p></div></div>
+      <form method="post" class="card-b">
         <?= csrfField() ?>
         <input type="hidden" name="action" value="joined">
-        <div class="field">
-          <label for="mger_joined_at">Дата вступления</label>
-          <input type="date" id="mger_joined_at" name="mger_joined_at" value="<?= e($v['mger_joined_at'] ?? '') ?>">
-          <div class="hint">Оставьте пустым, если дата неизвестна.</div>
+        <div class="row" style="align-items:flex-end;flex-wrap:wrap">
+          <div class="field" style="flex:1;min-width:160px;margin:0"><label for="mger_joined_at">Дата вступления</label><input class="input" type="date" id="mger_joined_at" name="mger_joined_at" value="<?= e($v['mger_joined_at'] ?? '') ?>"></div>
+          <button type="submit" class="btn btn-line">Сохранить</button>
         </div>
-        <button type="submit" class="btn btn-primary">Сохранить дату</button>
+        <p class="hint" style="margin-top:8px">Оставь пустым, если дата неизвестна.</p>
       </form>
-    </div>
-  </div>
+    </section>
 
-  <div class="card">
-    <div class="card-head"><div><h2>Заметка администратора</h2><p>Видна только администраторам и разработчику — сам волонтёр её не видит.</p></div></div>
-    <div class="card-body">
-      <form method="post">
+    <section class="card">
+      <div class="card-h"><div><h2>Заметка</h2><p>Сам волонтёр её не видит</p></div></div>
+      <form method="post" class="card-b stack">
         <?= csrfField() ?>
         <input type="hidden" name="action" value="notes">
-        <div class="field">
-          <textarea name="coordinator_notes" rows="6" placeholder="Например: отлично справляется с координацией, можно предлагать более крупные задачи"><?= e($v['coordinator_notes'] ?? '') ?></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary">Сохранить заметку</button>
+        <textarea class="textarea" name="coordinator_notes" rows="5" aria-label="Заметка администратора" placeholder="Например: хорошо справляется с координацией, можно давать задачи крупнее"><?= e($v['coordinator_notes'] ?? '') ?></textarea>
+        <div><button type="submit" class="btn btn-line">Сохранить заметку</button></div>
       </form>
-    </div>
+    </section>
   </div>
 </div>
 
-<div class="grid-2">
-  <div class="card">
-    <div class="card-head">
-      <div><h2>Достижения</h2><p>Выдайте существующее достижение или создайте новое.</p></div>
-      <a href="<?= url('admin/badges.php') ?>" class="btn btn-outline btn-sm">Все достижения</a>
-    </div>
-    <div class="card-body">
+<div class="grid g2" style="margin-top:18px">
+  <section class="card">
+    <div class="card-h"><div><h2>Достижения</h2><p><?= $earnedBadges ? 'Получено ' . count($earnedBadges) : 'Пока ни одного' ?></p></div><a class="btn btn-line btn-sm" href="<?= url('admin/badges.php') ?>">Все достижения</a></div>
+    <div class="card-b stack">
       <?php if ($allBadges): ?>
         <?php if ($earnedBadges): ?>
-          <div class="badge-grid" style="margin-bottom:18px;">
+          <ul class="list" style="margin:-20px -20px 0">
             <?php foreach ($allBadges as $b): if (!isset($earnedBadges[(int)$b['id']])) continue; ?>
-              <div class="badge-item is-earned">
-                <div class="ico"><?= $b['icon'] !== '' && $b['icon'] !== null ? e($b['icon']) : icon('badge-check') ?></div>
-                <b><?= e($b['title']) ?></b>
-                <span><?= e($b['description']) ?></span>
-                <div style="margin-top:8px;font-size:.75rem;color:var(--ok);font-weight:700;"><?= e(ruDate($earnedBadges[(int)$b['id']])) ?></div>
-                <form method="post" style="margin-top:8px;">
+              <li>
+                <span class="bdg-ico sm"><?= $b['icon'] !== '' && $b['icon'] !== null ? e($b['icon']) : icon('badge-check') ?></span>
+                <div class="grow"><b><?= e($b['title']) ?></b><small>Выдано <?= e(ruDate($earnedBadges[(int)$b['id']])) ?></small></div>
+                <form method="post" style="margin:0">
                   <?= csrfField() ?>
                   <input type="hidden" name="action" value="badge_revoke">
                   <input type="hidden" name="badge_id" value="<?= (int)$b['id'] ?>">
-                  <button type="submit" class="btn btn-outline btn-sm" data-confirm="Снять это достижение?">Снять</button>
+                  <button type="submit" class="btn btn-ghost btn-sm" data-confirm="Снять достижение «<?= e($b['title']) ?>»?">Снять</button>
                 </form>
-              </div>
+              </li>
             <?php endforeach; ?>
-          </div>
+          </ul>
         <?php endif; ?>
         <?php if ($availableBadges): ?>
-          <form method="post" class="inline-form">
+          <form method="post" class="row" style="flex-wrap:wrap">
             <?= csrfField() ?>
             <input type="hidden" name="action" value="badge_award">
-            <select name="badge_id" required>
-              <option value="">— выберите достижение —</option>
-              <?php foreach ($availableBadges as $b): ?>
-                <option value="<?= (int)$b['id'] ?>"><?= e($b['title']) ?></option>
-              <?php endforeach; ?>
+            <select class="select" name="badge_id" required aria-label="Достижение" style="flex:1;min-width:200px">
+              <option value="">Выбери достижение</option>
+              <?php foreach ($availableBadges as $b): ?><option value="<?= (int)$b['id'] ?>"><?= e($b['title']) ?></option><?php endforeach; ?>
             </select>
-            <button type="submit" class="btn btn-primary btn-sm">Выдать</button>
+            <button type="submit" class="btn btn-accent"><?= icon('medal') ?>Выдать</button>
           </form>
         <?php else: ?>
-          <p style="color:var(--muted);font-size:.88rem;">Все существующие достижения уже выданы.</p>
+          <p class="muted">Все существующие достижения уже выданы.</p>
         <?php endif; ?>
       <?php else: ?>
-        <div class="empty"><b>Достижения ещё не созданы</b><a href="<?= url('admin/badges.php') ?>">Создайте первое</a> на странице «Достижения».</div>
+        <div class="empty"><?= icon('medal') ?><b>Достижения ещё не созданы</b><a href="<?= url('admin/badges.php?new=1') ?>">Создать первое</a></div>
       <?php endif; ?>
     </div>
-  </div>
+  </section>
 
-  <div class="card">
-    <div class="card-head"><div><h2>История начислений</h2></div></div>
+  <section class="card">
+    <div class="card-h"><div><h2>История баллов</h2><p>Последние 20 операций</p></div></div>
     <?php if ($history): ?>
-      <div class="card-body card-body-flush table-wrap">
-        <table class="data">
-          <tbody>
-            <?php foreach ($history as $t): ?>
-              <tr>
-                <td style="white-space:nowrap;color:var(--muted);font-size:.83rem;"><?= e(ruDate($t['created_at'], true)) ?></td>
-                <td class="num" style="color:<?= (int)$t['points'] >= 0 ? 'var(--ok)' : 'var(--accent)' ?>;"><?= (int)$t['points'] > 0 ? '+' : '' ?><?= (int)$t['points'] ?></td>
-                <td><?= e($t['reason']) ?></td>
-              </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
-      </div>
+      <ul class="list">
+        <?php foreach ($history as $t): $pv = (int)$t['points']; ?>
+          <li>
+            <span class="num <?= $pv >= 0 ? 'pos' : 'neg' ?>" style="min-width:52px"><?= $pv > 0 ? '+' . $pv : '−' . abs($pv) ?></span>
+            <div class="grow"><b style="font-weight:500"><?= e($t['reason']) ?></b><small><?= e(ruDate($t['created_at'], true)) ?> · <?= e(trim(($t['by_first'] ?? '') . ' ' . ($t['by_last'] ?? '')) ?: 'система') ?></small></div>
+          </li>
+        <?php endforeach; ?>
+      </ul>
     <?php else: ?>
-      <div class="empty"><b>Начислений ещё не было</b></div>
+      <div class="empty"><?= icon('star') ?><b>Начислений ещё не было</b></div>
     <?php endif; ?>
-  </div>
+  </section>
 </div>
-
-<p><a href="<?= url('admin/users.php') ?>" class="btn btn-outline">← К списку волонтёров</a></p>
 
 <?php require __DIR__ . '/../includes/panel_footer.php'; ?>

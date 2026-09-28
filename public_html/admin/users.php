@@ -70,77 +70,92 @@ if ($search !== '') {
 }
 $users = fetchAll("SELECT * FROM users WHERE $where ORDER BY points DESC, last_name ASC LIMIT 200", $params);
 
+$counts = ['all' => count($users), 'volunteer' => 0, 'admin' => 0, 'dev' => 0, 'blocked' => 0];
+foreach ($users as $u) {
+    $counts[$u['role']]++;
+    if ($u['status'] === 'blocked') { $counts['blocked']++; }
+}
+$panelLead = 'Все одобренные учётные записи отделения. Нажми на строку, чтобы открыть карточку волонтёра.';
+$panelActions = '<a class="btn btn-line" href="' . url('admin/export.php?type=users' . ($search !== '' ? '&q=' . urlencode($search) : '')) . '">' . icon('download') . 'Экспорт CSV</a>';
+
 require __DIR__ . '/../includes/panel_header.php';
 ?>
 
-<div class="card">
-  <div class="card-head">
-    <div><h2>Список волонтёров — <?= count($users) ?></h2><p>Одобренные учётные записи отделения</p></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <form method="get" class="inline-form">
-        <input type="text" name="q" value="<?= e($search) ?>" placeholder="Поиск по имени, почте, телефону">
-        <button type="submit" class="btn btn-outline btn-sm">Найти</button>
-        <?php if ($search !== ''): ?><a href="<?= url('admin/users.php') ?>" class="btn btn-outline btn-sm">Сброс</a><?php endif; ?>
-      </form>
-      <a href="<?= url('admin/export.php?type=users' . ($search !== '' ? '&q=' . urlencode($search) : '')) ?>" class="btn btn-outline btn-sm"><?= icon('download') ?>Экспорт CSV</a>
+<section class="card">
+  <div class="toolbar">
+    <form method="get" class="input-ico" role="search">
+      <?= icon('search') ?>
+      <label class="sr" for="uq">Поиск</label>
+      <input class="input" id="uq" type="search" name="q" value="<?= e($search) ?>" placeholder="Имя, почта или телефон" data-filter-input="usersBody" data-filter-empty="usersEmpty" autocomplete="off">
+    </form>
+    <div class="seg" role="group" aria-label="Фильтр по роли">
+      <?php foreach (['all' => 'Все', 'volunteer' => 'Волонтёры', 'admin' => 'Администраторы', 'dev' => 'Разработчики', 'blocked' => 'Заблокированы'] as $k => $l): ?>
+        <?php if ($k !== 'all' && $counts[$k] === 0 && $k !== 'blocked') continue; ?>
+        <button type="button" class="<?= $k === 'all' ? 'on' : '' ?>" data-role-filter="<?= $k ?>"><?= $l ?> <em><?= $counts[$k] ?></em></button>
+      <?php endforeach; ?>
     </div>
   </div>
 
   <?php if ($users): ?>
-    <div class="card-body card-body-flush table-wrap">
+    <div class="table-wrap">
       <table class="data cards">
         <thead>
-          <tr><th>Волонтёр</th><th>Контакты</th><th>Роль</th><th>Позиция</th><th>Очки</th><th>Часы</th><th>Статус</th><th>Действия</th></tr>
+          <tr><th>Волонтёр</th><th>Телефон</th><th>Роль</th><th>Позиция</th><th class="r">Баллы</th><th class="r">Часы</th><th>Уровень</th><th>Статус</th><th></th></tr>
         </thead>
-        <tbody>
-          <?php foreach ($users as $u): ?>
-            <tr>
+        <tbody id="usersBody" data-role="all">
+          <?php foreach ($users as $u): $isMe = (int)$u['id'] === (int)$me['id']; ?>
+            <tr class="click" data-href="<?= url('admin/volunteer.php?id=' . (int)$u['id']) ?>"
+                data-role="<?= e($u['role'] . ($u['status'] === 'blocked' ? ' blocked' : '')) ?>"
+                data-filter-text="<?= e(mb_strtolower($u['last_name'] . ' ' . $u['first_name'] . ' ' . $u['email'] . ' ' . $u['phone'])) ?>">
               <td>
-                <b><a href="<?= url('admin/volunteer.php?id=' . (int)$u['id']) ?>"><?= e($u['last_name'] . ' ' . $u['first_name']) ?></a></b>
-                <div style="font-size:.79rem;color:var(--muted);">в организации с <?= e(ruDate(membershipDate($u))) ?></div>
+                <div class="who">
+                  <span class="ava"><?php if ($u['avatar']): ?><img src="<?= url('uploads/avatars/' . $u['avatar']) ?>" alt=""><?php else: ?><?= e(mb_substr($u['first_name'], 0, 1) . mb_substr($u['last_name'], 0, 1)) ?><?php endif; ?></span>
+                  <div style="min-width:0"><a href="<?= url('admin/volunteer.php?id=' . (int)$u['id']) ?>"><b><?= e($u['first_name'] . ' ' . $u['last_name']) ?></b></a><small><?= e($u['email']) ?></small></div>
+                </div>
               </td>
-              <td data-label="Контакты" style="font-size:.85rem;color:var(--muted);"><?= e($u['email']) ?><br><?= e($u['phone'] ?: '—') ?></td>
+              <td data-label="Телефон" class="num" style="white-space:nowrap;font-weight:400"><?= e($u['phone'] ?: 'не указан') ?></td>
               <td data-label="Роль">
-                <form method="post" class="inline-form" style="margin:0;">
+                <form method="post" class="inline-form">
                   <?= csrfField() ?>
                   <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
                   <input type="hidden" name="action" value="role">
                   <input type="hidden" name="q" value="<?= e($search) ?>">
-                  <select name="role" onchange="this.form.submit()">
+                  <select name="role" onchange="this.form.submit()" aria-label="Роль: <?= e($u['first_name'] . ' ' . $u['last_name']) ?>">
                     <option value="volunteer" <?= $u['role'] === 'volunteer' ? 'selected' : '' ?>>волонтёр</option>
-                    <option value="admin"     <?= $u['role'] === 'admin' ? 'selected' : '' ?>>администратор</option>
-                    <?php if (isDev()): ?><option value="dev" <?= $u['role'] === 'dev' ? 'selected' : '' ?>>разработчик</option><?php endif; ?>
+                    <option value="admin" <?= $u['role'] === 'admin' ? 'selected' : '' ?>>администратор</option>
+                    <?php if (isDev() || $u['role'] === 'dev'): ?><option value="dev" <?= $u['role'] === 'dev' ? 'selected' : '' ?>>разработчик</option><?php endif; ?>
                   </select>
-                  <?php if ((int)$u['id'] === (int)$me['id']): ?><div class="hint">Это вы — смена роли применится сразу.</div><?php endif; ?>
                 </form>
+                <?php if ($isMe): ?><div class="hint">Это вы: смена роли применится сразу.</div><?php endif; ?>
               </td>
               <td data-label="Позиция">
-                <form method="post" class="inline-form" style="margin:0;">
+                <form method="post" class="inline-form">
                   <?= csrfField() ?>
                   <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
                   <input type="hidden" name="action" value="position">
                   <input type="hidden" name="q" value="<?= e($search) ?>">
-                  <select name="position" onchange="this.form.submit()" <?= (int)$u['id'] === (int)$me['id'] ? 'disabled' : '' ?>>
+                  <select name="position" onchange="this.form.submit()" <?= $isMe ? 'disabled' : '' ?> aria-label="Позиция: <?= e($u['first_name'] . ' ' . $u['last_name']) ?>">
                     <?php foreach (POSITION_LABELS as $pv => $pl): ?>
                       <option value="<?= e($pv) ?>" <?= ($u['position'] ?? 'volunteer') === $pv ? 'selected' : '' ?>><?= e($pl) ?></option>
                     <?php endforeach; ?>
                   </select>
                 </form>
               </td>
-              <td class="num" data-label="Очки"><?= (int)$u['points'] ?></td>
-              <td class="num" data-label="Часы"><?= rtrim(rtrim(number_format((float)$u['hours'], 1, ',', ''), '0'), ',') ?></td>
+              <td class="num r" data-label="Баллы"><?= number_format((int)$u['points'], 0, '.', ' ') ?></td>
+              <td class="num r" data-label="Часы" style="font-weight:400"><?= rtrim(rtrim(number_format((float)$u['hours'], 1, ',', ''), '0'), ',') ?></td>
+              <td data-label="Уровень"><?= e(levelFor((int)$u['points'])['current']['name']) ?></td>
               <td data-label="Статус">
                 <?php if ($u['status'] === 'blocked'): ?>
-                  <span class="tag tag-blocked">заблокирован</span>
+                  <span class="chip"><?= icon('prohibit') ?>заблокирован</span>
                 <?php else: ?>
-                  <span class="tag tag-approved">активен</span>
+                  <span class="chip ok"><?= icon('check') ?>активен</span>
                 <?php endif; ?>
               </td>
-              <td data-label="Действия">
+              <td data-label="">
                 <div class="actions">
-                  <a href="<?= url('admin/points.php?user_id='.(int)$u['id']) ?>" class="btn btn-outline btn-sm">Очки</a>
-                  <?php if ((int)$u['id'] !== (int)$me['id']): ?>
-                    <form method="post" style="margin:0;">
+                  <a href="<?= url('admin/points.php?user_id=' . (int)$u['id']) ?>" class="btn btn-line btn-sm"><?= icon('star') ?>Баллы</a>
+                  <?php if (!$isMe): ?>
+                    <form method="post" class="inline-form">
                       <?= csrfField() ?>
                       <input type="hidden" name="user_id" value="<?= (int)$u['id'] ?>">
                       <input type="hidden" name="q" value="<?= e($search) ?>">
@@ -149,7 +164,7 @@ require __DIR__ . '/../includes/panel_header.php';
                         <button class="btn btn-ok btn-sm">Разблокировать</button>
                       <?php else: ?>
                         <input type="hidden" name="action" value="block">
-                        <button class="btn btn-outline btn-sm" data-confirm="Закрыть доступ этому волонтёру?">Заблокировать</button>
+                        <button class="btn btn-ghost btn-sm" data-confirm="Закрыть доступ этому волонтёру?" aria-label="Заблокировать"><?= icon('prohibit') ?></button>
                       <?php endif; ?>
                     </form>
                   <?php endif; ?>
@@ -160,9 +175,10 @@ require __DIR__ . '/../includes/panel_header.php';
         </tbody>
       </table>
     </div>
+    <div class="empty" id="usersEmpty" hidden><?= icon('users') ?><b>Никого не нашли</b>Измени запрос или фильтр.</div>
   <?php else: ?>
-    <div class="empty"><b>Ничего не найдено</b><?= $search !== '' ? 'Попробуйте изменить запрос.' : 'Одобренных волонтёров пока нет.' ?></div>
+    <div class="empty"><?= icon('users') ?><b>Ничего не найдено</b><?= $search !== '' ? 'Попробуй изменить запрос.' : 'Одобренных волонтёров пока нет.' ?></div>
   <?php endif; ?>
-</div>
+</section>
 
 <?php require __DIR__ . '/../includes/panel_footer.php'; ?>

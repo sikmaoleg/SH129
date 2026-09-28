@@ -9,7 +9,7 @@ $activeItem   = 'honor';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrfCheck();
     $userId = (int)($_POST['user_id'] ?? 0);
-    $note   = trim((string)($_POST['note'] ?? ''));
+    $note   = mb_substr(trim((string)($_POST['note'] ?? '')), 0, 160);
 
     if ($userId > 0) {
         $target = fetchOne("SELECT id FROM users WHERE id = ? AND status = 'approved'", [$userId]);
@@ -22,43 +22,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     setSetting('honor_user_id', (string)$userId);
     setSetting('honor_note', $note);
     logAction('honor_update', 'settings', null, (string)$userId);
-    flash('success', $userId > 0 ? 'Волонтёр месяца обновлён.' : 'Карточка волонтёра месяца скрыта с сайта.');
+    flash('success', $userId > 0 ? 'Волонтёр месяца обновлён, карточка уже на главной.' : 'Карточка волонтёра месяца скрыта с сайта.');
     redirect('admin/honor.php');
 }
 
-$volunteers = fetchAll("SELECT id, last_name, first_name, position FROM users WHERE status = 'approved' ORDER BY last_name ASC");
-$currentId  = (int)setting('honor_user_id');
+$volunteers = fetchAll(
+    "SELECT u.id, u.last_name, u.first_name, u.position, u.avatar,
+            COALESCE((SELECT SUM(t.points) FROM point_transactions t
+                      WHERE t.user_id = u.id AND t.created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')), 0) AS month_pts
+     FROM users u
+     WHERE u.status = 'approved'
+     ORDER BY month_pts DESC, u.last_name ASC"
+);
+$currentId   = (int)setting('honor_user_id');
 $currentNote = setting('honor_note');
+$months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+$monthTitle = mb_convert_case($months[(int)date('n') - 1], MB_CASE_TITLE) . ' ' . date('Y');
+$candidates = array_slice(array_filter($volunteers, fn($v) => (int)$v['month_pts'] > 0), 0, 3);
+$current = null;
+foreach ($volunteers as $v) { if ((int)$v['id'] === $currentId) { $current = $v; } }
+
+$panelLead = 'Волонтёр месяца показывается карточкой на главной странице сайта. Выбирай вручную: автоматики по баллам нет.';
+$panelActions = '<a class="btn btn-line" href="' . url('index.php') . '" target="_blank" rel="noopener">' . icon('external') . 'Открыть главную</a>';
 
 require __DIR__ . '/../includes/panel_header.php';
 ?>
 
-<div class="card">
-  <div class="card-head">
-    <div><h2>Волонтёр месяца</h2><p>Показывается карточкой на главной странице сайта. Нет автоматики по часам — выбирайте вручную.</p></div>
-  </div>
-  <div class="card-body">
-    <form method="post">
+<div class="grid g2">
+  <section class="card">
+    <div class="card-h">
+      <div><h2>Волонтёр месяца</h2><p><?= e($monthTitle) ?></p></div>
+      <?= $current ? '<span class="chip ok">' . icon('eye') . 'На сайте</span>' : '<span class="chip">' . icon('eye-off') . 'Скрыта</span>' ?>
+    </div>
+    <form method="post" class="card-b stack">
       <?= csrfField() ?>
       <div class="field">
-        <label for="user_id">Волонтёр</label>
-        <select id="user_id" name="user_id">
-          <option value="0">— не показывать на сайте —</option>
-          <?php foreach ($volunteers as $v): ?>
-            <option value="<?= (int)$v['id'] ?>" <?= $currentId === (int)$v['id'] ? 'selected' : '' ?>>
-              <?= e($v['last_name'] . ' ' . $v['first_name']) ?> · <?= e(positionLabel($v['position'])) ?>
+        <label for="honor_user">Волонтёр</label>
+        <select class="select" id="honor_user" name="user_id">
+          <option value="0">Не показывать на сайте</option>
+          <?php foreach ($volunteers as $v): $name = $v['first_name'] . ' ' . $v['last_name']; ?>
+            <option value="<?= (int)$v['id'] ?>" <?= $currentId === (int)$v['id'] ? 'selected' : '' ?>
+                    data-name="<?= e($name) ?>"
+                    data-ini="<?= e(mb_substr($v['first_name'], 0, 1) . mb_substr($v['last_name'], 0, 1)) ?>"
+                    data-ava="<?= $v['avatar'] ? e(url('uploads/avatars/' . $v['avatar'])) : '' ?>">
+              <?= e($name) ?> · <?= (int)$v['month_pts'] > 0 ? '+' . (int)$v['month_pts'] . ' за месяц' : e(positionLabel($v['position'])) ?>
             </option>
           <?php endforeach; ?>
         </select>
+        <span class="hint">Сверху те, у кого больше баллов в этом месяце.</span>
       </div>
+      <?php if ($candidates): ?>
+        <div class="field">
+          <span class="lbl">Лидеры месяца</span>
+          <div class="reasons">
+            <?php foreach ($candidates as $c): ?>
+              <button type="button" data-fill="<?= (int)$c['id'] ?>" data-fill-target="honor_user"><?= e($c['first_name'] . ' ' . $c['last_name']) ?> <span class="muted">+<?= (int)$c['month_pts'] ?></span></button>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      <?php endif; ?>
       <div class="field">
-        <label for="note">За что отмечен (коротко)</label>
-        <input type="text" id="note" name="note" maxlength="160" value="<?= e($currentNote) ?>"
-               placeholder="Например: провёл три мероприятия за месяц и помог с координацией волонтёров">
+        <label for="honor_note">За что отмечен</label>
+        <textarea class="textarea" id="honor_note" name="note" maxlength="160" style="min-height:96px" placeholder="Например: провёл три субботника и привёл в отделение двух новичков"><?= e($currentNote) ?></textarea>
+        <span class="hint" id="honorCount"></span>
       </div>
-      <button type="submit" class="btn btn-primary">Сохранить</button>
+      <div><button type="submit" class="btn btn-accent"><?= icon('crown') ?>Сохранить</button></div>
     </form>
-  </div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><div><h2>Так будет на сайте</h2><p>Карточка появляется на главной между новостями и командой</p></div></div>
+    <div class="card-b">
+      <div class="honor-prev" id="honorShown">
+        <span class="ava"><img id="honorAva" alt="" hidden><span id="honorIni"></span></span>
+        <div><p class="k"><?= icon('crown') ?> Волонтёр месяца</p><h4 id="honorName"></h4><p class="n" id="honorText"></p></div>
+      </div>
+      <div class="empty" id="honorHidden" hidden><?= icon('eye-off') ?><b>Карточка скрыта</b>На главной её не будет, пока не выберешь волонтёра.</div>
+    </div>
+  </section>
 </div>
 
 <?php require __DIR__ . '/../includes/panel_footer.php'; ?>

@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $ts = (clone $ts)->modify($interval);
                 }
                 flash('success', $created > 1
-                    ? "Создано {$created} мероприятий по шаблону («" . match ($repeatFreq) { 'biweekly' => 'раз в 2 недели', 'monthly' => 'ежемесячно', default => 'еженедельно' } . "»)."
+                    ? "Создана серия: {$created} " . plural($created, 'мероприятие', 'мероприятия', 'мероприятий') . ', ' . match ($repeatFreq) { 'biweekly' => 'раз в 2 недели', 'monthly' => 'каждый месяц', default => 'каждую неделю' } . '.'
                     : 'Мероприятие создано.');
             }
             redirect('admin/events.php');
@@ -93,132 +93,140 @@ $directions = fetchAll('SELECT * FROM directions ORDER BY sort ASC');
 $statusLabels = ['draft'=>['черновик','tag-blocked'],'published'=>['опубликовано','tag-approved'],
                  'finished'=>['завершено','tag-blue'],'cancelled'=>['отменено','tag-rejected']];
 
+$drawerOpen = $edit || $errors || isset($_GET['new']);
+$needMarks = fetchAll("SELECT id, title, starts_at FROM events WHERE status='published' AND starts_at < NOW() ORDER BY starts_at ASC LIMIT 3");
+$wd = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+$panelLead = 'Афиша видна только волонтёрам отделения, в личном кабинете.';
+$panelActions = '<button class="btn btn-accent" type="button" data-drawer-open="eventDrawer">' . icon('plus') . 'Новое мероприятие</button>';
+
 require __DIR__ . '/../includes/panel_header.php';
 ?>
 
-<?php if ($errors): ?>
-  <div class="alert alert-error"><ul><?php foreach ($errors as $e): ?><li><?= e($e) ?></li><?php endforeach; ?></ul></div>
+<?php foreach ($needMarks as $nm): ?>
+  <div class="alert warn" style="margin-bottom:12px"><?= icon('alert') ?><div><b>Отметь участие в&nbsp;«<?= e($nm['title']) ?>»</b><p>Прошло <?= e(ruDate($nm['starts_at'])) ?>. Баллы начислятся после сохранения отметок.</p></div><a class="btn btn-accent btn-sm" href="<?= url('admin/attendance.php?id=' . (int)$nm['id']) ?>">Отметить</a></div>
+<?php endforeach; ?>
+
+<div class="row" style="margin:6px 0 14px">
+  <div class="seg" role="group" aria-label="Период">
+    <a href="<?= url('admin/events.php') ?>" class="<?= $filter !== 'past' ? 'on' : '' ?>">Предстоящие</a>
+    <a href="<?= url('admin/events.php?filter=past') ?>" class="<?= $filter === 'past' ? 'on' : '' ?>">Прошедшие</a>
+  </div>
+</div>
+
+<?php if ($events): ?>
+  <div class="agenda">
+    <?php foreach ($events as $ev):
+      $ts = strtotime($ev['starts_at']);
+      $isPast = $ts < time();
+      $attn = $ev['status'] === 'published' && $isPast;
+      $cap = (int)$ev['capacity']; $taken = (int)$ev['taken']; ?>
+      <article class="ev <?= $attn ? 'attn' : '' ?>">
+        <div class="ev-date"><b><?= date('j', $ts) ?></b><span><?= mb_strtolower(RU_MONTHS_SHORT[(int)date('n', $ts)]) ?>, <?= $wd[(int)date('w', $ts)] ?></span></div>
+        <div>
+          <h3><?= e($ev['title']) ?></h3>
+          <div class="ev-meta">
+            <span><?= icon('clock') ?><?= date('H:i', $ts) ?></span>
+            <?php if ($ev['location']): ?><span><?= icon('map-pin') ?><?= e($ev['location']) ?></span><?php endif; ?>
+            <span><?= icon('star') ?>+<?= (int)$ev['points_reward'] ?> за участие</span>
+          </div>
+          <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:8px">
+            <?php if ($ev['status'] === 'finished'): ?><span class="chip ok"><?= icon('check-circle') ?>Завершено</span>
+            <?php elseif ($ev['status'] === 'draft'): ?><span class="chip"><?= icon('pencil') ?>Черновик</span>
+            <?php elseif ($ev['status'] === 'cancelled'): ?><span class="chip"><?= icon('prohibit') ?>Отменено</span>
+            <?php elseif ($attn): ?><span class="chip warn"><?= icon('alert') ?>Ждёт отметки</span>
+            <?php else: ?><span class="chip info"><?= icon('calendar-check') ?>Опубликовано</span><?php endif; ?>
+            <?php if ($ev['direction_title']): ?><span class="tag"><?= e($ev['direction_title']) ?></span><?php endif; ?>
+          </div>
+        </div>
+        <?php if ($isPast && (int)$ev['attended'] > 0): ?>
+          <div class="meter"><div class="meter-t"><span>Пришли</span><b class="num"><?= (int)$ev['attended'] ?> из <?= $taken ?></b></div><div class="meter-bar"><i style="width:<?= $taken ? min(100, (int)round($ev['attended'] / $taken * 100)) : 0 ?>%"></i></div></div>
+        <?php elseif ($cap > 0): ?>
+          <div class="meter <?= $taken >= $cap ? 'full' : '' ?>"><div class="meter-t"><span><?= $taken >= $cap ? 'Мест нет' : 'Записались' ?></span><b class="num"><?= $taken ?> из <?= $cap ?></b></div><div class="meter-bar"><i style="width:<?= min(100, (int)round($taken / $cap * 100)) ?>%"></i></div></div>
+        <?php else: ?>
+          <span class="tag"><?= icon('users') ?><?= $taken ?> <?= plural($taken, 'запись', 'записи', 'записей') ?></span>
+        <?php endif; ?>
+        <div class="ev-act">
+          <a class="btn <?= $attn ? 'btn-accent' : 'btn-line' ?> btn-sm" href="<?= url('admin/attendance.php?id=' . (int)$ev['id']) ?>"><?= icon('users') ?>Участники</a>
+          <a class="btn btn-line btn-sm" href="<?= url('admin/events.php?edit=' . (int)$ev['id'] . ($filter === 'past' ? '&filter=past' : '')) ?>" aria-label="Править «<?= e($ev['title']) ?>»"><?= icon('pencil') ?></a>
+          <form method="post" class="inline-form">
+            <?= csrfField() ?>
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="id" value="<?= (int)$ev['id'] ?>">
+            <button class="btn btn-ghost btn-sm" data-confirm="Удалить мероприятие вместе со всеми записями?" aria-label="Удалить «<?= e($ev['title']) ?>»"><?= icon('trash') ?></button>
+          </form>
+        </div>
+      </article>
+    <?php endforeach; ?>
+  </div>
+<?php else: ?>
+  <section class="card"><div class="empty"><?= icon('calendar-check') ?><b>Здесь пусто</b><?= $filter === 'past' ? 'Прошедших мероприятий пока нет.' : 'Создай мероприятие, и оно появится в афише волонтёров.' ?><button class="btn btn-accent btn-sm" type="button" data-drawer-open="eventDrawer"><?= icon('plus') ?>Новое мероприятие</button></div></section>
 <?php endif; ?>
 
-<div class="card">
-  <div class="card-head"><div><h2><?= $edit ? 'Редактирование мероприятия' : 'Новое мероприятие' ?></h2></div>
-    <?php if ($edit): ?><a href="<?= url('admin/events.php') ?>" class="btn btn-outline btn-sm">Отменить правку</a><?php endif; ?>
-  </div>
-  <div class="card-body">
-    <form method="post">
+<aside class="drawer" id="eventDrawer" role="dialog" aria-modal="true" aria-labelledby="eventDrawerTitle" <?= $drawerOpen ? '' : 'hidden' ?> <?= $edit || isset($_GET['new']) ? 'data-close-url="' . e(url('admin/events.php' . ($filter === 'past' ? '?filter=past' : ''))) . '"' : '' ?>>
+  <form class="drawer-panel" method="post">
+    <header class="drawer-head">
+      <div><p class="drawer-kicker"><?= $edit ? 'Редактирование' : 'Новое мероприятие' ?></p><h2 class="drawer-title" id="eventDrawerTitle"><?= $edit ? e($edit['title']) : 'Мероприятие' ?></h2></div>
+      <button class="icon-btn" type="button" data-close-drawer aria-label="Закрыть"><?= icon('close') ?></button>
+    </header>
+    <div class="drawer-body">
       <?= csrfField() ?>
       <input type="hidden" name="action" value="save">
       <input type="hidden" name="id" value="<?= (int)($edit['id'] ?? 0) ?>">
-
+      <?php if ($errors): ?><div class="alert alert-error"><ul><?php foreach ($errors as $er): ?><li><?= e($er) ?></li><?php endforeach; ?></ul></div><?php endif; ?>
       <div class="field"><label for="title">Название</label>
-        <input type="text" id="title" name="title" value="<?= e($edit['title'] ?? '') ?>" required></div>
-
-      <div class="field-row-3">
+        <input type="text" id="title" name="title" value="<?= e($edit['title'] ?? ($_POST['title'] ?? '')) ?>" placeholder="Например: субботник в городском парке" required></div>
+      <div class="frow">
         <div class="field"><label for="date">Дата</label>
-          <input type="date" id="date" name="date" value="<?= e($edit ? date('Y-m-d', strtotime($edit['starts_at'])) : '') ?>" required></div>
+          <input type="date" id="date" name="date" value="<?= e($edit ? date('Y-m-d', strtotime($edit['starts_at'])) : ($_POST['date'] ?? '')) ?>" required></div>
         <div class="field"><label for="time">Время</label>
-          <input type="time" id="time" name="time" value="<?= e($edit ? date('H:i', strtotime($edit['starts_at'])) : '10:00') ?>"></div>
+          <input type="time" id="time" name="time" value="<?= e($edit ? date('H:i', strtotime($edit['starts_at'])) : ($_POST['time'] ?? '10:00')) ?>"></div>
+      </div>
+      <div class="frow">
         <div class="field"><label for="direction_id">Направление</label>
           <select id="direction_id" name="direction_id">
-            <option value="">— не выбрано —</option>
+            <option value="">Не выбрано</option>
             <?php foreach ($directions as $d): ?>
-              <option value="<?= (int)$d['id'] ?>" <?= (int)($edit['direction_id'] ?? 0) === (int)$d['id'] ? 'selected' : '' ?>><?= e($d['title']) ?></option>
+              <option value="<?= (int)$d['id'] ?>" <?= (int)($edit['direction_id'] ?? ($_POST['direction_id'] ?? 0)) === (int)$d['id'] ? 'selected' : '' ?>><?= e($d['title']) ?></option>
             <?php endforeach; ?>
           </select></div>
+        <div class="field"><label for="location">Место проведения</label>
+          <input type="text" id="location" name="location" value="<?= e($edit['location'] ?? ($_POST['location'] ?? '')) ?>" placeholder="Адрес или ориентир"></div>
       </div>
-
-      <div class="field"><label for="location">Место проведения</label>
-        <input type="text" id="location" name="location" value="<?= e($edit['location'] ?? '') ?>" placeholder="Например: городской парк, ул. Центральная"></div>
-
-      <div class="field-row-3">
-        <div class="field"><label for="capacity">Количество мест</label>
-          <input type="number" id="capacity" name="capacity" min="0" value="<?= (int)($edit['capacity'] ?? 0) ?>">
-          <div class="hint">0 — без ограничения.</div></div>
-        <div class="field"><label for="points_reward">Очки за участие</label>
-          <input type="number" id="points_reward" name="points_reward" min="0" value="<?= (int)($edit['points_reward'] ?? 10) ?>"></div>
+      <div class="frow3">
+        <div class="field"><label for="capacity">Мест</label>
+          <input type="number" id="capacity" name="capacity" min="0" value="<?= (int)($edit['capacity'] ?? ($_POST['capacity'] ?? 0)) ?>">
+          <span class="hint">0 = без ограничений</span></div>
+        <div class="field"><label for="points_reward">Баллы за участие</label>
+          <input type="number" id="points_reward" name="points_reward" min="0" value="<?= (int)($edit['points_reward'] ?? ($_POST['points_reward'] ?? 10)) ?>"></div>
         <div class="field"><label for="status">Статус</label>
           <select id="status" name="status">
             <?php foreach ($statusLabels as $k => [$lbl, $_]): ?>
-              <option value="<?= $k ?>" <?= ($edit['status'] ?? 'published') === $k ? 'selected' : '' ?>><?= $lbl ?></option>
+              <option value="<?= $k ?>" <?= ($edit['status'] ?? ($_POST['status'] ?? 'published')) === $k ? 'selected' : '' ?>><?= mb_convert_case($lbl, MB_CASE_TITLE, 'UTF-8') ?></option>
             <?php endforeach; ?>
           </select></div>
       </div>
-
       <div class="field"><label for="description">Описание</label>
-        <textarea id="description" name="description" placeholder="Что будем делать, что взять с собой, как добраться"><?= e($edit['description'] ?? '') ?></textarea></div>
-
+        <textarea id="description" name="description" placeholder="Что будем делать, что взять с собой, как добраться"><?= e($edit['description'] ?? ($_POST['description'] ?? '')) ?></textarea></div>
       <?php if (!$edit): ?>
-        <div class="field">
-          <label class="field-check">
-            <input type="checkbox" id="repeat_enable" name="repeat_enable" value="1">
-            <span>Сделать повторяющимся — создать сразу несколько мероприятий по этому шаблону</span>
-          </label>
-        </div>
-        <div class="field-row-3" id="repeatOptions" style="display:none;">
-          <div class="field"><label for="repeat_freq">Периодичность</label>
+        <label class="switchbox"><span><b>Повторять</b><small>Создать серию одинаковых мероприятий</small></span><input type="checkbox" id="repeat_enable" name="repeat_enable" value="1"><span class="toggle"></span></label>
+        <div class="frow" id="repeatFields" hidden>
+          <div class="field"><label for="repeat_freq">Как часто</label>
             <select id="repeat_freq" name="repeat_freq">
               <option value="weekly">Каждую неделю</option>
               <option value="biweekly">Раз в 2 недели</option>
               <option value="monthly">Каждый месяц</option>
             </select></div>
-          <div class="field"><label for="repeat_count">Сколько раз (включая первое)</label>
-            <input type="number" id="repeat_count" name="repeat_count" min="1" max="26" value="4"></div>
+          <div class="field"><label for="repeat_count">Сколько раз, включая первое</label>
+            <input type="number" id="repeat_count" name="repeat_count" min="2" max="26" value="4"></div>
         </div>
-        <script>
-          document.getElementById('repeat_enable').addEventListener('change', function () {
-            document.getElementById('repeatOptions').style.display = this.checked ? 'grid' : 'none';
-          });
-        </script>
+        <p class="repeat-note" id="repeatNote" hidden></p>
       <?php endif; ?>
-
-      <button type="submit" class="btn btn-primary"><?= $edit ? 'Сохранить изменения' : 'Создать мероприятие' ?></button>
-    </form>
-  </div>
-</div>
-
-<div class="card">
-  <div class="card-head">
-    <div><h2><?= $filter === 'past' ? 'Прошедшие' : 'Предстоящие' ?> мероприятия</h2>
-      <p><?= $filter === 'past' ? 'Отметьте участие, чтобы начислить баллы волонтёрам.' : 'Открыта запись волонтёров.' ?></p></div>
-    <div style="display:flex;gap:8px;">
-      <a href="<?= url('admin/events.php') ?>" class="btn btn-sm <?= $filter !== 'past' ? 'btn-primary' : 'btn-outline' ?>">Предстоящие</a>
-      <a href="<?= url('admin/events.php?filter=past') ?>" class="btn btn-sm <?= $filter === 'past' ? 'btn-primary' : 'btn-outline' ?>">Прошедшие</a>
     </div>
-  </div>
-
-  <?php if ($events): ?>
-    <div class="card-body card-body-flush table-wrap">
-      <table class="data">
-        <thead><tr><th>Дата</th><th>Мероприятие</th><th>Записей</th><th>Отмечено</th><th>Статус</th><th>Действия</th></tr></thead>
-        <tbody>
-          <?php foreach ($events as $ev): [$lbl, $cls] = $statusLabels[$ev['status']]; ?>
-            <tr>
-              <td style="white-space:nowrap;"><?= e(ruDate($ev['starts_at'], true)) ?></td>
-              <td><b><?= e($ev['title']) ?></b>
-                <div style="font-size:.8rem;color:var(--muted);"><?= e($ev['direction_title'] ?: 'без направления') ?><?= $ev['location'] ? ' · ' . e($ev['location']) : '' ?></div></td>
-              <td class="num"><?= (int)$ev['taken'] ?><?= (int)$ev['capacity'] > 0 ? ' / '.(int)$ev['capacity'] : '' ?></td>
-              <td class="num"><?= (int)$ev['attended'] ?></td>
-              <td><span class="tag <?= $cls ?>"><?= $lbl ?></span></td>
-              <td>
-                <div class="actions">
-                  <a href="<?= url('admin/attendance.php?id='.(int)$ev['id']) ?>" class="btn btn-primary btn-sm">Участники</a>
-                  <a href="<?= url('admin/events.php?edit='.(int)$ev['id']) ?>" class="btn btn-outline btn-sm">Править</a>
-                  <form method="post" style="margin:0;">
-                    <?= csrfField() ?>
-                    <input type="hidden" name="action" value="delete">
-                    <input type="hidden" name="id" value="<?= (int)$ev['id'] ?>">
-                    <button class="btn btn-outline btn-sm" data-confirm="Удалить мероприятие вместе со всеми записями?">Удалить</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
-  <?php else: ?>
-    <div class="empty"><b>Мероприятий нет</b>Создайте первое в форме выше.</div>
-  <?php endif; ?>
-</div>
+    <footer class="drawer-foot">
+      <button class="btn btn-ghost" type="button" data-close-drawer>Отмена</button>
+      <button class="btn btn-accent" type="submit"><?= $edit ? 'Сохранить' : 'Создать мероприятие' ?></button>
+    </footer>
+  </form>
+</aside>
 
 <?php require __DIR__ . '/../includes/panel_footer.php'; ?>
