@@ -31,7 +31,7 @@ if (isDev()) {
     $devIssues += (($config['dev_key'] ?? '') === 'change-me-please') ? 1 : 0;
 }
 
-$sections = [
+$_ph_sections = [
     'cabinet' => ['Личный кабинет', 'cabinet/index.php', [
         ['Кабинет', [
             ['index',   'Обзор',           'cabinet/index.php',   'grid', 0],
@@ -74,29 +74,29 @@ $sections = [
         ]],
     ]],
 ];
-[$sectionTitle, $sectionHome, $groups] = $sections[$panelSection];
+[$_ph_sectionTitle, $_ph_sectionHome, $_ph_groups] = $_ph_sections[$panelSection];
 
 // Переключатель разделов — только если у человека больше одной панели
-$switch = [];
-if (isAdmin()) { $switch['admin'] = ['Администратор', 'admin/index.php']; }
-if (isDev())   { $switch['dev']   = ['Разработчик', 'dev/index.php']; }
+$_ph_switch = [];
+if (isAdmin()) { $_ph_switch['admin'] = ['Администратор', 'admin/index.php']; }
+if (isDev())   { $_ph_switch['dev']   = ['Разработчик', 'dev/index.php']; }
 
 // Данные для поиска (Ctrl+K): разделы всех доступных панелей и частые действия
 $paletteItems = [];
-foreach ($sections as $secKey => [$secTitle, , $secGroups]) {
-    if (($secKey === 'admin' && !isAdmin()) || ($secKey === 'dev' && !isDev())) {
+foreach ($_ph_sections as $_ph_secKey => [$_ph_secTitle, , $_ph_secGroups]) {
+    if (($_ph_secKey === 'admin' && !isAdmin()) || ($_ph_secKey === 'dev' && !isDev())) {
         continue;
     }
-    foreach ($secGroups as [, $items]) {
-        foreach ($items as [, $label, $href, $ic]) {
-            $paletteItems[] = ['g' => 'Разделы', 't' => $label, 's' => $secTitle, 'i' => icon($ic), 'u' => url($href)];
+    foreach ($_ph_secGroups as [, $_ph_items]) {
+        foreach ($_ph_items as [, $_ph_label, $_ph_href, $_ph_ic]) {
+            $paletteItems[] = ['g' => 'Разделы', 't' => $_ph_label, 's' => $_ph_secTitle, 'i' => icon($_ph_ic), 'u' => url($_ph_href)];
         }
     }
 }
 if (isAdmin()) {
     foreach ([['Создать мероприятие', 'admin/events.php?new=1', 'calendar-check'], ['Написать новость', 'admin/news.php?new=1', 'newspaper'],
-              ['Начислить баллы', 'admin/points.php', 'star'], ['Отметить участие', 'admin/events.php?filter=past', 'list-checks']] as [$t, $u, $ic]) {
-        $paletteItems[] = ['g' => 'Действия', 't' => $t, 's' => '', 'i' => icon($ic), 'u' => url($u)];
+              ['Начислить баллы', 'admin/points.php', 'star'], ['Отметить участие', 'admin/events.php?filter=past', 'list-checks']] as [$_ph_t, $_ph_u, $_ph_ic]) {
+        $paletteItems[] = ['g' => 'Действия', 't' => $_ph_t, 's' => '', 'i' => icon($_ph_ic), 'u' => url($_ph_u)];
     }
 }
 if (isDev()) {
@@ -148,34 +148,34 @@ if ($panelSection === 'cabinet' && $me) {
 
   <aside class="side" id="side" aria-label="Меню панели">
     <div class="side-top">
-      <a class="side-logo" href="<?= url($sectionHome) ?>" aria-label="Молодая Гвардия Щёлково: <?= e($sectionTitle) ?>"><span class="logo"></span></a>
+      <a class="side-logo" href="<?= url($_ph_sectionHome) ?>" aria-label="Молодая Гвардия Щёлково: <?= e($_ph_sectionTitle) ?>"><span class="logo"></span></a>
       <button class="icon-btn side-close" type="button" id="sideClose" aria-label="Закрыть меню"><?= icon('close') ?></button>
     </div>
-    <?php if (count($switch) > 1 && $panelSection !== 'cabinet'): ?>
+    <?php if (count($_ph_switch) > 1 && $panelSection !== 'cabinet'): ?>
       <nav class="switch" aria-label="Раздел панели">
-        <?php foreach ($switch as $key => [$label, $href]): ?>
-          <a href="<?= url($href) ?>" class="<?= $panelSection === $key ? 'on' : '' ?>"><?= e($label) ?></a>
+        <?php foreach ($_ph_switch as $_ph_key => [$_ph_label, $_ph_href]): ?>
+          <a href="<?= url($_ph_href) ?>" class="<?= $panelSection === $_ph_key ? 'on' : '' ?>"><?= e($_ph_label) ?></a>
         <?php endforeach; ?>
       </nav>
     <?php else: ?>
-      <p class="side-title"><?= e($sectionTitle) ?></p>
+      <p class="side-title"><?= e($_ph_sectionTitle) ?></p>
     <?php endif; ?>
-    <nav class="side-nav" aria-label="<?= e($sectionTitle) ?>">
-      <?php foreach ($groups as [$groupTitle, $items]): ?>
+    <nav class="side-nav" aria-label="<?= e($_ph_sectionTitle) ?>">
+      <?php foreach ($_ph_groups as [$_ph_groupTitle, $_ph_items]): ?>
         <div class="side-group">
-          <?php if (count($groups) > 1): ?><p><?= e($groupTitle) ?></p><?php endif; ?>
-          <?php foreach ($items as [$key, $label, $href, $ic, $count]): ?>
-            <a href="<?= url($href) ?>" class="<?= $activeItem === $key ? 'on' : '' ?>" <?= $activeItem === $key ? 'aria-current="page"' : '' ?>>
-              <?= icon($ic) ?><span><?= e($label) ?></span>
-              <?php if ($count > 0): ?><span class="count" aria-label="требуют внимания: <?= (int)$count ?>"><?= (int)$count ?></span><?php endif; ?>
+          <?php if (count($_ph_groups) > 1): ?><p><?= e($_ph_groupTitle) ?></p><?php endif; ?>
+          <?php foreach ($_ph_items as [$_ph_key, $_ph_label, $_ph_href, $_ph_ic, $_ph_count]): ?>
+            <a href="<?= url($_ph_href) ?>" class="<?= $activeItem === $_ph_key ? 'on' : '' ?>" <?= $activeItem === $_ph_key ? 'aria-current="page"' : '' ?>>
+              <?= icon($_ph_ic) ?><span><?= e($_ph_label) ?></span>
+              <?php if ($_ph_count > 0): ?><span class="count" aria-label="требуют внимания: <?= (int)$_ph_count ?>"><?= (int)$_ph_count ?></span><?php endif; ?>
             </a>
           <?php endforeach; ?>
         </div>
       <?php endforeach; ?>
-      <?php if ($panelSection === 'cabinet' && $switch): ?>
+      <?php if ($panelSection === 'cabinet' && $_ph_switch): ?>
         <div class="side-group"><p>Управление</p>
-          <?php foreach ($switch as $key => [$label, $href]): ?>
-            <a href="<?= url($href) ?>"><?= icon($key === 'dev' ? 'heartbeat' : 'shield-check') ?><span>Панель: <?= e(mb_strtolower($label)) ?></span></a>
+          <?php foreach ($_ph_switch as $_ph_key => [$_ph_label, $_ph_href]): ?>
+            <a href="<?= url($_ph_href) ?>"><?= icon($_ph_key === 'dev' ? 'heartbeat' : 'shield-check') ?><span>Панель: <?= e(mb_strtolower($_ph_label)) ?></span></a>
           <?php endforeach; ?>
         </div>
       <?php endif; ?>
@@ -202,7 +202,7 @@ if ($panelSection === 'cabinet' && $me) {
     <header class="top">
       <button class="icon-btn menu-btn" type="button" id="menuBtn" aria-label="Открыть меню" aria-controls="side" aria-expanded="false"><?= icon('menu') ?></button>
       <nav class="crumbs" aria-label="Навигация">
-        <a href="<?= url($sectionHome) ?>"><?= e($sectionTitle) ?></a>
+        <a href="<?= url($_ph_sectionHome) ?>"><?= e($_ph_sectionTitle) ?></a>
         <?php if ($panelCrumb): ?><span class="sep">/</span><a href="<?= url($panelCrumb[1]) ?>"><?= e($panelCrumb[0]) ?></a><?php endif; ?>
         <span class="sep">/</span><b><?= e($panelTitle) ?></b>
       </nav>
@@ -248,6 +248,6 @@ if ($panelSection === 'cabinet' && $me) {
         </div>
       <?php endif; ?>
 
-      <?php foreach (takeFlash() as $f): ?>
-        <div class="alert alert-<?= e($f['type']) ?>" role="status"><?= e($f['message']) ?></div>
+      <?php foreach (takeFlash() as $_ph_f): ?>
+        <div class="alert alert-<?= e($_ph_f['type']) ?>" role="status"><?= e($_ph_f['message']) ?></div>
       <?php endforeach; ?>
