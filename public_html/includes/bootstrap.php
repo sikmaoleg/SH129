@@ -529,6 +529,7 @@ function actionLabel(string $action): array
         'honor_update'             => ['Обновлена доска почёта', 'crown', ''],
         'settings_update'          => ['Изменены настройки сайта', 'gear', ''],
         'telegram_settings_update' => ['Изменены настройки Telegram', 'telegram', ''],
+        'telegram_sync'            => ['Загружены посты из Telegram', 'telegram', 'info'],
         'logs_cleanup'             => ['Очищен журнал', 'trash', ''],
     ][$action] ?? [$action, 'clipboard', ''];
 }

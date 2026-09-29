@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/telegram.php';
 $me = requireAdmin();
 
 $panelSection = 'admin';
@@ -13,6 +14,19 @@ $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrfCheck();
     $action = $_POST['action'] ?? '';
+
+    if ($action === 'tg_sync') {
+        try {
+            $result = runTelegramSync();
+            logAction('telegram_sync', 'news', null, 'импортировано: ' . (int)$result['imported']);
+            flash('success', (int)$result['imported'] > 0
+                ? 'Загружено из Telegram: ' . (int)$result['imported'] . ' ' . plural((int)$result['imported'], 'пост', 'поста', 'постов') . '. Они уже на сайте.'
+                : 'Новых постов в канале нет. Всё, что вышло после прошлой загрузки, уже здесь.');
+        } catch (Throwable $e) {
+            flash('error', 'Не удалось загрузить посты из Telegram: ' . $e->getMessage());
+        }
+        redirect('admin/news.php');
+    }
 
     if ($action === 'delete') {
         $id = (int)($_POST['id'] ?? 0);
@@ -63,7 +77,15 @@ $items = fetchAll('SELECT n.*, u.last_name, u.first_name FROM news n LEFT JOIN u
 $drawerOpen = $edit || $errors || isset($_GET['new']);
 $cntPub = count(array_filter($items, fn($n) => $n['status'] === 'published'));
 $panelLead = 'Посты из Telegram-канала попадают сюда автоматически. Проверь заголовок и при необходимости поправь текст.';
-$panelActions = '<button class="btn btn-accent" type="button" data-drawer-open="newsDrawer">' . icon('plus') . 'Новая новость</button>';
+$tgReady  = setting('telegram_bot_token') !== '' && setting('telegram_channel') !== '';
+$lastSync = setting('telegram_last_sync_at');
+if ($lastSync) {
+    $panelLead .= ' Последняя загрузка из Telegram: ' . e(ruDate($lastSync, true)) . '.';
+}
+$panelActions = ($tgReady
+        ? '<form method="post" style="margin:0">' . csrfField() . '<input type="hidden" name="action" value="tg_sync"><button class="btn btn-line" type="submit">' . icon('telegram') . 'Загрузить из Telegram</button></form>'
+        : (isDev() ? '<a class="btn btn-line" href="' . url('dev/telegram.php') . '">' . icon('telegram') . 'Подключить Telegram</a>' : ''))
+    . '<button class="btn btn-accent" type="button" data-drawer-open="newsDrawer">' . icon('plus') . 'Новая новость</button>';
 $formTitle = $edit ? cleanNewsTitle((string)$edit['title'], (string)$edit['body']) : ($_POST['title'] ?? '');
 
 require __DIR__ . '/../includes/panel_header.php';
