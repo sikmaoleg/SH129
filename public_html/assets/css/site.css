@@ -275,9 +275,11 @@ section{position:relative}
 
 /* ---------- Во что мы верим ---------- */
 .creed{padding-bottom:clamp(80px,10vw,150px)}
-.creed-list{margin-top:clamp(28px,4vw,56px)}
+.creed-list{margin-top:clamp(28px,4vw,56px);container-type:inline-size}
 .creed-row{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px 64px;align-items:center;padding:clamp(22px,2.6vw,36px) 0;border-top:2px solid var(--ink)}
-.creed-word{font-size:clamp(96px,13.5vw,212px);font-weight:900;line-height:.84;padding-left:calc(var(--i) * 5vw);transform:skewY(-5deg);transform-origin:0 50%}
+.creed-word{font-size:clamp(96px,13.5vw,212px);font-weight:900;line-height:.84;padding-left:calc(var(--i) * 5vw);transform:skewY(-5deg);transform-origin:0 50%;white-space:nowrap}
+/* Размер считается от ширины блока, а не окна: так «В деле» не залезает на текст ни при какой ширине */
+@supports (width:1cqi){.creed-word{font-size:clamp(84px,13.5cqi,196px);padding-left:calc(var(--i) * 4cqi)}}
 .creed-word span{color:var(--accent-text)}
 .creed-row p{font-size:clamp(18px,1.6vw,22px);line-height:1.5;color:var(--ink-2);max-width:40ch}
 

@@ -107,7 +107,7 @@ require __DIR__ . '/includes/header.php';
       <div class="band-group">
         <span>Люди</span><?= icon('star-four') ?>
         <span>Идеи</span><?= icon('star-four') ?>
-        <span>Дела</span><?= icon('star-four') ?>
+        <span>В деле</span><?= icon('star-four') ?>
         <span>Молодая Гвардия Щёлково</span><?= icon('star-four') ?>
       </div>
     <?php endfor; ?>
