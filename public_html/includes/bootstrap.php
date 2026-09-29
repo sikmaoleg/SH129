@@ -45,17 +45,25 @@ function db(): PDO
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
+            PDO::ATTR_TIMEOUT            => 5,
         ]);
         // Некоторые хостинги игнорируют charset из DSN при handshake
         // (skip_character_set_client_handshake) и молча открывают
         // соединение в utf8mb3 — принудительно переключаем явной командой.
         $pdo->exec("SET NAMES '{$d['charset']}'");
     } catch (PDOException $e) {
-        http_response_code(500);
-        if (!empty($GLOBALS['config']['debug'])) {
-            exit('Ошибка подключения к базе: ' . $e->getMessage());
-        }
-        exit('Сайт временно недоступен. Не удалось подключиться к базе данных.');
+        // База недоступна (например, сервер хостинга перегружен): отвечаем быстро
+        // и честно, чтобы браузеры и поисковики повторили запрос позже.
+        http_response_code(503);
+        header('Retry-After: 60');
+        header('Content-Type: text/html; charset=utf-8');
+        $detail = !empty($GLOBALS['config']['debug']) ? '<p style="font-size:13px;color:#5F6888">' . htmlspecialchars($e->getMessage()) . '</p>' : '';
+        exit('<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            . '<title>Сайт временно недоступен</title></head>'
+            . '<body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#F1F3F9;color:#0B1233;font:16px/1.5 system-ui,sans-serif;padding:24px">'
+            . '<div style="max-width:460px"><h1 style="font-size:28px;margin:0 0 12px">Сайт на минутку прилёг</h1>'
+            . '<p style="margin:0 0 16px;color:#454F70">Сервер базы данных сейчас перегружен. Обновите страницу через минуту.</p>'
+            . '<p style="margin:0"><a href="" style="color:#2A45F0;font-weight:600">Обновить</a></p>' . $detail . '</div></body></html>');
     }
     return $pdo;
 }
