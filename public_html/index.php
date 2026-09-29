@@ -128,7 +128,7 @@ require __DIR__ . '/includes/header.php';
         <p>Любовь к&nbsp;своей стране и&nbsp;уважение к&nbsp;её истории. Память о&nbsp;подвиге предков, забота о&nbsp;старшем поколении, ответственность за&nbsp;место, где живёшь.</p>
       </article>
       <article class="creed-row" style="--i:2" data-reveal>
-        <h3 class="creed-word display">Дела<span>.</span></h3>
+        <h3 class="creed-word display">В&nbsp;деле<span>.</span></h3>
         <p>Идеи ничего не&nbsp;стоят без поступков. Поэтому мы выходим на&nbsp;шествия и&nbsp;памятные акции, помогаем жителям, участвуем в&nbsp;благоустройстве и&nbsp;устраиваем праздники для&nbsp;округа.</p>
       </article>
     </div>
