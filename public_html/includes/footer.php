@@ -66,15 +66,15 @@
 </body>
 </html>
 <?php
-// Автозагрузка постов из Telegram без cron: не чаще раза в 30 минут и уже после того,
+// Автозагрузка постов из Telegram без cron: не чаще раза в 15 минут и уже после того,
 // как страница отдана посетителю (нужен PHP-FPM; на других режимах просто не срабатывает).
 if (function_exists('fastcgi_finish_request') && setting('telegram_channel') !== ''
-    && time() - (int)strtotime(setting('telegram_last_sync_at') ?: '2000-01-01') > 1800) {
+    && time() - (int)strtotime(setting('telegram_last_sync_at') ?: '2000-01-01') > 900) {
     register_shutdown_function(function () {
         fastcgi_finish_request();
         require_once __DIR__ . '/telegram.php';
         try {
-            runTelegramSync();
+            runTelegramSync(3, 18.0);
         } catch (Throwable $e) {
             // ошибку видно в «Разработчик → Telegram», посетителю она не мешает
         }

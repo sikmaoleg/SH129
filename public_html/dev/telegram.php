@@ -80,7 +80,7 @@ require __DIR__ . '/../includes/panel_header.php';
   <div class="stat-inline">
     <div><b class="num"><?= $tgNews ?></b><span><?= plural($tgNews, 'новость', 'новости', 'новостей') ?> из канала</span></div>
     <div><b class="num"><?= $draftsFromTg ?></b><span><?= plural($draftsFromTg, 'черновик ждёт', 'черновика ждут', 'черновиков ждут') ?> публикации</span></div>
-    <div><b><?= function_exists('fastcgi_finish_request') ? 'включена' : 'нет' ?></b><span><?= function_exists('fastcgi_finish_request') ? 'автозагрузка при посещениях сайта, раз в 30 минут' : 'автозагрузки при посещениях: хостинг не поддерживает, нужен cron ниже' ?></span></div>
+    <div><b><?= function_exists('fastcgi_finish_request') ? 'включена' : 'нет' ?></b><span><?= function_exists('fastcgi_finish_request') ? 'автозагрузка при посещениях сайта, раз в 15 минут' : 'автозагрузки при посещениях: хостинг не поддерживает, нужен cron ниже' ?></span></div>
   </div>
 </section>
 

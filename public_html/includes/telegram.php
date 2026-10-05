@@ -297,8 +297,11 @@ function tgSaveImageFromUrl(string $url): ?string
  * чтобы не вытащить архив канала, и пропускаем посты, удалённые администратором.
  * За один запуск не больше $limit постов, чтобы уложиться во время запроса.
  */
-function tgWebImport(string $username, int $limit = 8): array
+function tgWebImport(string $username, int $limit = 8, float $budget = 20.0): array
 {
+    // Хостинг обрывает долгие запросы, поэтому работаем не дольше $budget секунд:
+    // пост, который не успели скачать целиком, останется на следующий запуск.
+    $deadline = microtime(true) + $budget;
     $posts = tgFetchPublicPosts($username);
     $since = fetchValue('SELECT MIN(published_at) FROM news WHERE tg_message_id IS NOT NULL');
     $sinceTs = $since ? strtotime((string)$since) - 86400 : 0;
@@ -314,16 +317,29 @@ function tgWebImport(string $username, int $limit = 8): array
             $skipped++;
             continue;
         }
-        if ($imported >= $limit) {
+        if ($imported >= $limit || microtime(true) > $deadline) {
             $left++;
             continue;
         }
         $images = [];
+        $complete = true;
         foreach ($post['images'] as $url) {
+            if ($imported > 0 && microtime(true) > $deadline) {
+                $complete = false;
+                break;
+            }
             $f = tgSaveImageFromUrl($url);
             if ($f) {
                 $images[] = $f;
             }
+        }
+        if (!$complete) {
+            // Не успели: убираем скачанное, этот пост заберём в следующий раз целиком
+            foreach ($images as $f) {
+                @unlink(APP_ROOT . '/uploads/news/' . $f);
+            }
+            $left++;
+            continue;
         }
         tgCreateNews($post['id'], $post['ts'], $post['text'], $images);
         $imported++;
@@ -336,7 +352,7 @@ function tgWebImport(string $username, int $limit = 8): array
  * Возвращает ['imported'=>int,'skipped'=>int,'left'=>int,'notes'=>[...]] или
  * бросает исключение, если не сработал ни один источник.
  */
-function runTelegramSync(): array
+function runTelegramSync(int $webLimit = 8, float $budget = 20.0): array
 {
     $token   = setting('telegram_bot_token');
     $channel = trim(setting('telegram_channel'));
@@ -352,6 +368,8 @@ function runTelegramSync(): array
         throw new RuntimeException('Загрузка уже идёт, подожди минуту.');
     }
 
+    // Отмечаем запуск сразу: если хостинг оборвёт запрос, автозапуск не будет повторяться на каждом посещении
+    setSetting('telegram_last_sync_at', date('Y-m-d H:i:s'));
     $imported = 0; $skipped = 0; $left = 0; $notes = []; $ok = false;
     if ($token !== '') {
         try {
@@ -364,7 +382,7 @@ function runTelegramSync(): array
     $username = ltrim($channel, '@');
     if (preg_match('/^[A-Za-z0-9_]{4,}$/', $username)) {
         try {
-            $r = tgWebImport($username);
+            $r = tgWebImport($username, $webLimit, $budget);
             $imported += $r['imported']; $skipped += $r['skipped']; $left += $r['left']; $ok = true;
         } catch (Throwable $e) {
             $notes[] = 'страница канала: ' . $e->getMessage();
