@@ -208,7 +208,12 @@ function tgHttpGet(string $url, int $timeout = 20): ?string
     ]);
     $body = curl_exec($ch);
     $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    return ($body === false || $code >= 400) ? null : (string)$body;
+    if ($body === false || $code >= 400) {
+        // Запоминаем причину, чтобы показать её администратору в сообщении о загрузке
+        $GLOBALS['tg_http_error'] = $body === false ? ('нет ответа: ' . curl_error($ch)) : ('ответ ' . $code);
+        return null;
+    }
+    return (string)$body;
 }
 
 /** Текст поста из блока tgme_widget_message_text: переносы строк сохраняются, эмодзи остаются символами. */
@@ -280,7 +285,14 @@ function tgFetchPublicPosts(string $username): array
 /** Скачивает картинку по ссылке и сохраняет в uploads/news. */
 function tgSaveImageFromUrl(string $url): ?string
 {
-    $bytes = tgHttpGet($url, 25) ?? tgHttpGet($url, 25); // одна повторная попытка при сбое сети
+    // Сервер картинок Telegram иногда отвечает медленно или не отвечает вовсе:
+    // короткий таймаут, повтор только если первая попытка упала быстро.
+    $t = microtime(true);
+    $bytes = tgHttpGet($url, 12);
+    if ($bytes === null && microtime(true) - $t < 4) {
+        usleep(400000);
+        $bytes = tgHttpGet($url, 12);
+    }
     if ($bytes === null) {
         return null;
     }
@@ -300,51 +312,74 @@ function tgSaveImageFromUrl(string $url): ?string
 function tgWebImport(string $username, int $limit = 8, float $budget = 20.0): array
 {
     // Хостинг обрывает долгие запросы, поэтому работаем не дольше $budget секунд:
-    // пост, который не успели скачать целиком, останется на следующий запуск.
+    // пост, который не успели обработать, останется на следующий запуск.
     $deadline = microtime(true) + $budget;
     $posts = tgFetchPublicPosts($username);
     $since = fetchValue('SELECT MIN(published_at) FROM news WHERE tg_message_id IS NOT NULL');
     $sinceTs = $since ? strtotime((string)$since) - 86400 : 0;
     $ignored = array_filter(array_map('intval', explode(',', setting('telegram_ignored_ids'))));
+    $locked  = array_filter(array_map('intval', explode(',', setting('telegram_photos_locked'))));
+    $GLOBALS['tg_http_error'] = null;
 
-    $imported = 0; $skipped = 0; $left = 0;
+    $download = function (array $urls) use (&$photoFails): array {
+        $files = [];
+        foreach ($urls as $i => $url) {
+            if ($i > 0) {
+                usleep(150000); // не дёргаем сервер картинок слишком часто
+            }
+            $f = tgSaveImageFromUrl($url);
+            if ($f) {
+                $files[] = $f;
+            } else {
+                $photoFails++;
+            }
+        }
+        return $files;
+    };
+
+    $imported = 0; $skipped = 0; $left = 0; $healed = 0; $photoFails = 0;
     foreach ($posts as $post) {
-        if ($post['ts'] < $sinceTs || in_array($post['id'], $ignored, true)
-            || fetchValue('SELECT id FROM news WHERE tg_message_id = ?', [$post['id']])) {
+        if ($post['ts'] < $sinceTs || in_array($post['id'], $ignored, true)) {
+            continue;
+        }
+        $existing = fetchOne('SELECT id, cover, (SELECT COUNT(*) FROM news_images i WHERE i.news_id = n.id) AS photos FROM news n WHERE tg_message_id = ?', [$post['id']]);
+        if ($existing) {
+            // Пост уже на сайте, но фото скачались не все: докачиваем, пока есть время
+            if (count($post['images']) > (int)$existing['photos'] && !in_array($post['id'], $locked, true)
+                && microtime(true) < $deadline) {
+                $files = $download($post['images']);
+                if (count($files) > (int)$existing['photos']) {
+                    foreach (fetchAll('SELECT image FROM news_images WHERE news_id = ?', [$existing['id']]) as $old) {
+                        @unlink(APP_ROOT . '/' . $old['image']);
+                    }
+                    q('DELETE FROM news_images WHERE news_id = ?', [$existing['id']]);
+                    foreach ($files as $i => $f) {
+                        q('INSERT INTO news_images (news_id, image, sort) VALUES (?,?,?)', [$existing['id'], 'uploads/news/' . $f, $i * 10]);
+                    }
+                    q('UPDATE news SET cover = ? WHERE id = ?', [$files[0], $existing['id']]);
+                    $healed++;
+                } else {
+                    foreach ($files as $f) {
+                        @unlink(APP_ROOT . '/uploads/news/' . $f);
+                    }
+                }
+            }
             continue;
         }
         if ($post['text'] === '') {
             $skipped++;
             continue;
         }
-        if ($imported >= $limit || microtime(true) > $deadline) {
+        if ($imported >= $limit || ($imported > 0 && microtime(true) > $deadline)) {
             $left++;
             continue;
         }
-        $images = [];
-        $complete = true;
-        foreach ($post['images'] as $url) {
-            if ($imported > 0 && microtime(true) > $deadline) {
-                $complete = false;
-                break;
-            }
-            $f = tgSaveImageFromUrl($url);
-            if ($f) {
-                $images[] = $f;
-            }
-        }
-        if (!$complete) {
-            // Не успели: убираем скачанное, этот пост заберём в следующий раз целиком
-            foreach ($images as $f) {
-                @unlink(APP_ROOT . '/uploads/news/' . $f);
-            }
-            $left++;
-            continue;
-        }
-        tgCreateNews($post['id'], $post['ts'], $post['text'], $images);
+        // Текст публикуем сразу, даже если часть фото не скачалась: их докачает следующий запуск
+        tgCreateNews($post['id'], $post['ts'], $post['text'], $download($post['images']));
         $imported++;
     }
-    return ['imported' => $imported, 'skipped' => $skipped, 'left' => $left];
+    return ['imported' => $imported, 'skipped' => $skipped, 'left' => $left, 'healed' => $healed,
+            'photo_fails' => $photoFails, 'photo_error' => $GLOBALS['tg_http_error'] ?? null];
 }
 
 /**
@@ -370,7 +405,7 @@ function runTelegramSync(int $webLimit = 8, float $budget = 20.0): array
 
     // Отмечаем запуск сразу: если хостинг оборвёт запрос, автозапуск не будет повторяться на каждом посещении
     setSetting('telegram_last_sync_at', date('Y-m-d H:i:s'));
-    $imported = 0; $skipped = 0; $left = 0; $notes = []; $ok = false;
+    $imported = 0; $skipped = 0; $left = 0; $healed = 0; $notes = []; $ok = false;
     if ($token !== '') {
         try {
             $r = tgBotImport($token, $channel);
@@ -384,6 +419,10 @@ function runTelegramSync(int $webLimit = 8, float $budget = 20.0): array
         try {
             $r = tgWebImport($username, $webLimit, $budget);
             $imported += $r['imported']; $skipped += $r['skipped']; $left += $r['left']; $ok = true;
+            $healed = $r['healed'];
+            if ($r['photo_fails'] > 0) {
+                $notes[] = 'не скачалось фото: ' . $r['photo_fails'] . ($r['photo_error'] ? ' (' . $r['photo_error'] . ')' : '') . ', докачаю при следующей загрузке';
+            }
         } catch (Throwable $e) {
             $notes[] = 'страница канала: ' . $e->getMessage();
         }
@@ -394,9 +433,9 @@ function runTelegramSync(int $webLimit = 8, float $budget = 20.0): array
     }
 
     setSetting('telegram_last_sync_at', date('Y-m-d H:i:s'));
-    setSetting('telegram_last_sync_result', "Импортировано: {$imported}, пропущено: {$skipped}" . ($notes ? '. Ошибки: ' . implode('; ', $notes) : ''));
+    setSetting('telegram_last_sync_result', "Импортировано: {$imported}, докачаны фото: {$healed}, пропущено: {$skipped}" . ($notes ? '. Заметки: ' . implode('; ', $notes) : ''));
     if (!$ok) {
         throw new RuntimeException(implode('; ', $notes) ?: 'Не настроен ни бот, ни публичный канал.');
     }
-    return ['imported' => $imported, 'skipped' => $skipped, 'left' => $left, 'notes' => $notes];
+    return ['imported' => $imported, 'skipped' => $skipped, 'left' => $left, 'healed' => $healed, 'notes' => $notes];
 }

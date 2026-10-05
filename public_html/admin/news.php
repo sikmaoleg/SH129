@@ -24,8 +24,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ? 'Загружено из Telegram: ' . $n . ' ' . plural($n, 'пост', 'поста', 'постов') . '. Они уже на сайте.'
                 : 'Новых постов в канале нет, всё уже на сайте.')
                 . (!empty($result['left']) ? ' Загружаю остальные: ещё ' . (int)$result['left'] . '.' : ''));
+            if (!empty($result['healed'])) {
+                flash('success', 'Докачаны фото у ' . (int)$result['healed'] . ' ' . plural((int)$result['healed'], 'поста', 'постов', 'постов') . '.');
+            }
             if (!empty($result['notes'])) {
-                flash('info', 'Один из источников не ответил: ' . implode('; ', $result['notes']));
+                flash('info', 'Telegram: ' . implode('; ', $result['notes']) . '.');
             }
             if (!empty($result['left']) && $n > 0) {
                 // Хостинг обрывает долгие запросы, поэтому остаток забираем следующими порциями сами
@@ -81,8 +84,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 q('INSERT INTO news (title, excerpt, body, status, published_at, author_id) VALUES (?,?,?,?,?,?)',
                   [$title, $excerpt, $body, $status, $publishedAt, (int)$me['id']]);
-                logAction('news_create', 'news', (int)db()->lastInsertId(), $title);
+                $id = (int)db()->lastInsertId();
+                logAction('news_create', 'news', $id, $title);
                 flash('success', 'Новость опубликована.');
+            }
+
+            // Фото: снять отмеченные и добавить загруженные
+            $photosChanged = false;
+            $remove = array_map('intval', (array)($_POST['remove_images'] ?? []));
+            foreach ($remove as $imgId) {
+                $img = fetchOne('SELECT image FROM news_images WHERE id = ? AND news_id = ?', [$imgId, $id]);
+                if ($img) {
+                    @unlink(__DIR__ . '/../' . $img['image']);
+                    q('DELETE FROM news_images WHERE id = ?', [$imgId]);
+                    $photosChanged = true;
+                }
+            }
+            $files = $_FILES['photos'] ?? null;
+            $failed = 0;
+            if ($files && is_array($files['name'])) {
+                $sort = (int)fetchValue('SELECT COALESCE(MAX(sort),0) FROM news_images WHERE news_id = ?', [$id]);
+                foreach ($files['name'] as $k => $nm) {
+                    if (($files['error'][$k] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+                        continue;
+                    }
+                    $saved = ($files['error'][$k] === UPLOAD_ERR_OK && $files['size'][$k] <= 50 * 1024 * 1024)
+                        ? resizeAndSaveImage($files['tmp_name'][$k], 'news', 1600) : null;
+                    if ($saved) {
+                        $sort += 10;
+                        q('INSERT INTO news_images (news_id, image, sort) VALUES (?,?,?)', [$id, 'uploads/news/' . $saved, $sort]);
+                        $photosChanged = true;
+                    } else {
+                        $failed++;
+                    }
+                }
+            }
+            if ($photosChanged) {
+                $first = fetchValue('SELECT image FROM news_images WHERE news_id = ? ORDER BY sort ASC, id ASC LIMIT 1', [$id]);
+                q('UPDATE news SET cover = ? WHERE id = ?', [$first ? basename((string)$first) : null, $id]);
+                // Фото у поста из Telegram поправлены вручную: автодокачка их больше не трогает
+                $tgId = (int)fetchValue('SELECT tg_message_id FROM news WHERE id = ?', [$id]);
+                if ($tgId > 0) {
+                    $locked = array_filter(array_map('intval', explode(',', setting('telegram_photos_locked'))));
+                    $locked[] = $tgId;
+                    setSetting('telegram_photos_locked', implode(',', array_slice(array_unique($locked), -300)));
+                }
+            }
+            if ($failed) {
+                flash('error', 'Не удалось добавить фото: ' . $failed . '. Подходят JPG, PNG или WEBP до 50 МБ.');
             }
             redirect('admin/news.php');
         }
@@ -103,6 +152,7 @@ $panelActions = ($tgReady
         ? '<form method="post" style="margin:0">' . csrfField() . '<input type="hidden" name="action" value="tg_sync"><button class="btn btn-line" type="submit">' . icon('telegram') . 'Загрузить из Telegram</button></form>'
         : (isDev() ? '<a class="btn btn-line" href="' . url('dev/telegram.php') . '">' . icon('telegram') . 'Подключить Telegram</a>' : ''))
     . '<button class="btn btn-accent" type="button" data-drawer-open="newsDrawer">' . icon('plus') . 'Новая новость</button>';
+$editImages = $edit ? fetchAll('SELECT id, image FROM news_images WHERE news_id = ? ORDER BY sort ASC, id ASC', [$edit['id']]) : [];
 $formTitle = $edit ? cleanNewsTitle((string)$edit['title'], (string)$edit['body']) : ($_POST['title'] ?? '');
 
 require __DIR__ . '/../includes/panel_header.php';
@@ -169,7 +219,7 @@ require __DIR__ . '/../includes/panel_header.php';
 </section>
 
 <aside class="drawer" id="newsDrawer" role="dialog" aria-modal="true" aria-labelledby="newsDrawerTitle" <?= $drawerOpen ? '' : 'hidden' ?> <?= $edit || isset($_GET['new']) ? 'data-close-url="' . e(url('admin/news.php')) . '"' : '' ?>>
-  <form class="drawer-panel" method="post">
+  <form class="drawer-panel" method="post" enctype="multipart/form-data">
     <header class="drawer-head">
       <div><p class="drawer-kicker"><?= $edit ? 'Редактирование новости' : 'Новая новость' ?></p><h2 class="drawer-title" id="newsDrawerTitle"><?= $edit ? e(cleanNewsTitle((string)$edit['title'], (string)$edit['body'])) : 'Новость' ?></h2></div>
       <button class="icon-btn" type="button" data-close-drawer aria-label="Закрыть"><?= icon('close') ?></button>
@@ -197,6 +247,19 @@ require __DIR__ . '/../includes/panel_header.php';
             <option value="published" <?= ($edit['status'] ?? ($_POST['status'] ?? 'published')) === 'published' ? 'selected' : '' ?>>Опубликовано</option>
             <option value="draft" <?= ($edit['status'] ?? ($_POST['status'] ?? '')) === 'draft' ? 'selected' : '' ?>>Черновик</option>
           </select></div>
+      </div>
+      <div class="field">
+        <span class="lbl">Фотографии</span>
+        <?php if ($editImages): ?>
+          <div class="news-photos">
+            <?php foreach ($editImages as $im): ?>
+              <label class="news-photo"><img src="<?= url($im['image']) ?>" alt="" loading="lazy"><input type="checkbox" name="remove_images[]" value="<?= (int)$im['id'] ?>"><span><?= icon('trash') ?>Убрать</span></label>
+            <?php endforeach; ?>
+          </div>
+          <span class="hint">Отметь фото, которые нужно убрать. Первое фото становится обложкой.</span>
+        <?php endif; ?>
+        <input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple aria-label="Добавить фото">
+        <span class="hint">Можно выбрать сразу несколько. JPG, PNG или WEBP.</span>
       </div>
       <?php if ($edit && $edit['cover']): ?>
         <div><p class="lbl" style="margin-bottom:8px">Так карточка выглядит на сайте</p>

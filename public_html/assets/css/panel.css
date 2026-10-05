@@ -762,6 +762,15 @@ fieldset[disabled] .att-opt{cursor:default;opacity:.6}
 .rank-cell.place{min-width:46px;justify-content:flex-start}
 input[type=file]{max-width:100%;min-width:0;width:100%;font-size:13.5px}
 .stack>*{min-width:0}
+/* Фото новости в форме */
+.news-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.news-photo{position:relative;display:block;cursor:pointer;aspect-ratio:1;overflow:hidden;background:var(--paper-2)}
+.news-photo img{width:100%;height:100%;object-fit:cover;transition:opacity .2s}
+.news-photo input{position:absolute;opacity:0;pointer-events:none}
+.news-photo span{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;gap:4px;height:28px;font-size:12px;font-weight:600;background:rgb(11 18 51/.72);color:#F7F8FF;opacity:0;transition:opacity .2s}
+.news-photo:hover span,.news-photo input:focus-visible~span{opacity:1}
+.news-photo input:checked~span{opacity:1;background:var(--warn)}
+.news-photo:has(input:checked) img{opacity:.35}
 /* ================= Адаптив ================= */
 @media (max-width:1280px){
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
