@@ -195,14 +195,14 @@ function tgCreateNews(int $tgMessageId, int $timestamp, string $text, array $ima
 }
 
 /** GET-запрос с понятным User-Agent. Возвращает тело ответа или null. */
-function tgHttpGet(string $url, int $timeout = 20): ?string
+function tgHttpGet(string $url, int $timeout = 20, int $connectTimeout = 10): ?string
 {
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_TIMEOUT        => $timeout,
-        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_CONNECTTIMEOUT => $connectTimeout,
         CURLOPT_USERAGENT      => 'Mozilla/5.0 (compatible; sh-129-mg.ru news import)',
         CURLOPT_HTTPHEADER     => ['Accept-Language: ru'],
     ]);
@@ -285,13 +285,18 @@ function tgFetchPublicPosts(string $username): array
 /** Скачивает картинку по ссылке и сохраняет в uploads/news. */
 function tgSaveImageFromUrl(string $url): ?string
 {
-    // Сервер картинок Telegram иногда отвечает медленно или не отвечает вовсе:
-    // короткий таймаут, повтор только если первая попытка упала быстро.
-    $t = microtime(true);
-    $bytes = tgHttpGet($url, 12);
-    if ($bytes === null && microtime(true) - $t < 4) {
-        usleep(400000);
-        $bytes = tgHttpGet($url, 12);
+    // Сервер картинок Telegram (cdn*.telesco.pe) с хостинга бывает недоступен.
+    // Тогда берём ту же картинку через открытый посредник images.weserv.nl,
+    // и до конца запуска сразу идём через него, чтобы не ждать таймауты.
+    $bytes = null;
+    if (empty($GLOBALS['tg_cdn_down'])) {
+        $bytes = tgHttpGet($url, 12, 5);
+        if ($bytes === null) {
+            $GLOBALS['tg_cdn_down'] = true;
+        }
+    }
+    if ($bytes === null) {
+        $bytes = tgHttpGet('https://images.weserv.nl/?url=' . rawurlencode($url), 20, 8);
     }
     if ($bytes === null) {
         return null;
