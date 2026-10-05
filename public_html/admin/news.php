@@ -19,13 +19,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $result = runTelegramSync();
             logAction('telegram_sync', 'news', null, 'импортировано: ' . (int)$result['imported']);
-            $n = (int)$result['imported'];
+            $n = (int)$result['imported'] + max(0, (int)($_POST['done'] ?? 0)); // вместе с прошлыми порциями
             flash('success', ($n > 0
                 ? 'Загружено из Telegram: ' . $n . ' ' . plural($n, 'пост', 'поста', 'постов') . '. Они уже на сайте.'
                 : 'Новых постов в канале нет, всё уже на сайте.')
-                . (!empty($result['left']) ? ' Осталось ещё ' . (int)$result['left'] . ', нажми кнопку снова.' : ''));
+                . (!empty($result['left']) ? ' Загружаю остальные: ещё ' . (int)$result['left'] . '.' : ''));
             if (!empty($result['notes'])) {
                 flash('info', 'Один из источников не ответил: ' . implode('; ', $result['notes']));
+            }
+            if (!empty($result['left']) && $n > 0) {
+                // Хостинг обрывает долгие запросы, поэтому остаток забираем следующими порциями сами
+                takeFlash(); // промежуточные сообщения не копим, итог покажем в конце
+                redirect('admin/news.php?tg_more=' . $n);
             }
         } catch (Throwable $e) {
             flash('error', 'Не удалось загрузить посты из Telegram: ' . $e->getMessage());
@@ -102,6 +107,14 @@ $formTitle = $edit ? cleanNewsTitle((string)$edit['title'], (string)$edit['body'
 
 require __DIR__ . '/../includes/panel_header.php';
 ?>
+<?php if (isset($_GET['tg_more']) && $tgReady): ?>
+  <form method="post" id="tgMore" class="alert info" style="margin-bottom:16px">
+    <?= csrfField() ?><input type="hidden" name="action" value="tg_sync"><input type="hidden" name="done" value="<?= (int)$_GET['tg_more'] ?>">
+    <?= icon('refresh', 'icon spin') ?><p>Загружено постов: <?= (int)$_GET['tg_more'] ?>. Забираю следующие из Telegram, не закрывай страницу…</p>
+    <noscript><button class="btn btn-line btn-sm" type="submit">Продолжить</button></noscript>
+  </form>
+  <script>setTimeout(function () { document.getElementById('tgMore').submit(); }, 400);</script>
+<?php endif; ?>
 
 <section class="card">
   <div class="toolbar">

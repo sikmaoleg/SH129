@@ -280,7 +280,7 @@ function tgFetchPublicPosts(string $username): array
 /** Скачивает картинку по ссылке и сохраняет в uploads/news. */
 function tgSaveImageFromUrl(string $url): ?string
 {
-    $bytes = tgHttpGet($url, 25);
+    $bytes = tgHttpGet($url, 25) ?? tgHttpGet($url, 25); // одна повторная попытка при сбое сети
     if ($bytes === null) {
         return null;
     }
