@@ -38,7 +38,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'sync') {
         try {
             $result = runTelegramSync();
-            flash('success', "Синхронизация выполнена. Импортировано: {$result['imported']}, пропущено: {$result['skipped']}.");
+            flash('success', "Синхронизация выполнена. Импортировано: {$result['imported']}, пропущено: {$result['skipped']}." . ($result['left'] ? " Осталось ещё {$result['left']}, запусти снова." : ''));
+            if ($result['notes']) {
+                flash('info', 'Один из источников не ответил: ' . implode('; ', $result['notes']));
+            }
         } catch (Throwable $e) {
             flash('error', 'Ошибка синхронизации: ' . $e->getMessage());
         }
@@ -56,7 +59,7 @@ $draftsFromTg = (int)fetchValue("SELECT COUNT(*) FROM news WHERE tg_message_id I
 $tgNews    = (int)fetchValue('SELECT COUNT(*) FROM news WHERE tg_message_id IS NOT NULL');
 $connected = setting('telegram_bot_token') !== '' && setting('telegram_channel') !== '';
 $lastSync  = setting('telegram_last_sync_at');
-$panelLead = 'Посты из канала сами попадают в новости сайта и сразу публикуются. Здесь подключение и расписание.';
+$panelLead = 'Посты из канала попадают в новости сайта и сразу публикуются. Источники: бот (видит посты за последние сутки) и публичная страница канала (последние ~20 постов).';
 $panelActions = '<form method="post" style="margin:0">' . csrfField() . '<input type="hidden" name="action" value="check"><button type="submit" class="btn btn-line">' . icon('badge-check') . 'Проверить бота</button></form>'
     . '<form method="post" style="margin:0">' . csrfField() . '<input type="hidden" name="action" value="sync"><button type="submit" class="btn btn-accent">' . icon('refresh') . 'Синхронизировать</button></form>';
 
@@ -77,7 +80,7 @@ require __DIR__ . '/../includes/panel_header.php';
   <div class="stat-inline">
     <div><b class="num"><?= $tgNews ?></b><span><?= plural($tgNews, 'новость', 'новости', 'новостей') ?> из канала</span></div>
     <div><b class="num"><?= $draftsFromTg ?></b><span><?= plural($draftsFromTg, 'черновик ждёт', 'черновика ждут', 'черновиков ждут') ?> публикации</span></div>
-    <div><b><?= $lastSync ? e(date('H:i', strtotime($lastSync))) : 'нет' ?></b><span>время последней синхронизации</span></div>
+    <div><b><?= function_exists('fastcgi_finish_request') ? 'включена' : 'нет' ?></b><span><?= function_exists('fastcgi_finish_request') ? 'автозагрузка при посещениях сайта, раз в 30 минут' : 'автозагрузки при посещениях: хостинг не поддерживает, нужен cron ниже' ?></span></div>
   </div>
 </section>
 

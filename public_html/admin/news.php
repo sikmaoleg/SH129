@@ -19,9 +19,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $result = runTelegramSync();
             logAction('telegram_sync', 'news', null, 'импортировано: ' . (int)$result['imported']);
-            flash('success', (int)$result['imported'] > 0
-                ? 'Загружено из Telegram: ' . (int)$result['imported'] . ' ' . plural((int)$result['imported'], 'пост', 'поста', 'постов') . '. Они уже на сайте.'
-                : 'Новых постов в канале нет. Всё, что вышло после прошлой загрузки, уже здесь.');
+            $n = (int)$result['imported'];
+            flash('success', ($n > 0
+                ? 'Загружено из Telegram: ' . $n . ' ' . plural($n, 'пост', 'поста', 'постов') . '. Они уже на сайте.'
+                : 'Новых постов в канале нет, всё уже на сайте.')
+                . (!empty($result['left']) ? ' Осталось ещё ' . (int)$result['left'] . ', нажми кнопку снова.' : ''));
+            if (!empty($result['notes'])) {
+                flash('info', 'Один из источников не ответил: ' . implode('; ', $result['notes']));
+            }
         } catch (Throwable $e) {
             flash('error', 'Не удалось загрузить посты из Telegram: ' . $e->getMessage());
         }
@@ -36,6 +41,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (is_file($path)) {
                 @unlink($path);
             }
+        }
+        // Пост из Telegram запоминаем, чтобы загрузка с канала не вернула его обратно
+        $tgId = (int)fetchValue('SELECT tg_message_id FROM news WHERE id = ?', [$id]);
+        if ($tgId > 0) {
+            $ignored = array_filter(array_map('intval', explode(',', setting('telegram_ignored_ids'))));
+            $ignored[] = $tgId;
+            setSetting('telegram_ignored_ids', implode(',', array_slice(array_unique($ignored), -300)));
         }
         q('DELETE FROM news WHERE id = ?', [$id]); // news_images удаляются каскадом
         logAction('news_delete', 'news', $id);
@@ -77,7 +89,7 @@ $items = fetchAll('SELECT n.*, u.last_name, u.first_name FROM news n LEFT JOIN u
 $drawerOpen = $edit || $errors || isset($_GET['new']);
 $cntPub = count(array_filter($items, fn($n) => $n['status'] === 'published'));
 $panelLead = 'Посты из Telegram-канала попадают сюда автоматически. Проверь заголовок и при необходимости поправь текст.';
-$tgReady  = setting('telegram_bot_token') !== '' && setting('telegram_channel') !== '';
+$tgReady  = setting('telegram_channel') !== '';
 $lastSync = setting('telegram_last_sync_at');
 if ($lastSync) {
     $panelLead .= ' Последняя загрузка из Telegram: ' . e(ruDate($lastSync, true)) . '.';
