@@ -33,3 +33,9 @@ Options -Indexes
     Header set X-Frame-Options "SAMEORIGIN"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
+
+# Короткие ссылки на мероприятия: /e/12 -> event.php?id=12
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^e/([0-9]+)/?$ event.php?id=$1 [L,QSA]
+</IfModule>

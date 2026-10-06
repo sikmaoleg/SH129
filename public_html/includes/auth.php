@@ -118,9 +118,10 @@ function requireLogin(): array
 {
     $user = currentUser();
     if (!$user) {
-        $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'] ?? '';
-        flash('error', 'Войдите, чтобы открыть эту страницу.');
-        redirect('login.php');
+        // Куда вернуть после входа: и в сессии, и в адресе (если ссылку откроют в другом браузере)
+        $back = safeReturnPath($_SERVER['REQUEST_URI'] ?? '');
+        $_SESSION['redirect_after_login'] = $back;
+        redirect('login.php' . ($back !== '' ? '?next=' . urlencode($back) : ''));
     }
     return $user;
 }

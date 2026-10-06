@@ -1,8 +1,17 @@
 <?php
 require_once __DIR__ . '/includes/bootstrap.php';
 
+// Куда вернуть после входа: из ссылки (?next=) или из сессии
+$next = safeReturnPath((string)($_GET['next'] ?? $_POST['next'] ?? ($_SESSION['redirect_after_login'] ?? '')));
+
 if (isLoggedIn()) {
-    redirect(homeForRole(userRole()));
+    redirect($next !== '' ? $next : homeForRole(userRole()));
+}
+
+// Пришли по ссылке на мероприятие: покажем, какое именно
+$nextEvent = null;
+if ($next !== '' && preg_match('~^/(?:event\.php\?id=|e/)(\d+)~', $next, $m)) {
+    $nextEvent = fetchOne("SELECT id, title, starts_at, location FROM events WHERE id = ? AND status IN ('published','finished')", [(int)$m[1]]);
 }
 
 $pageTitle = 'Вход: Молодая Гвардия Щёлково';
@@ -20,10 +29,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $result = attemptLogin($email, $password);
         if ($result['ok']) {
-            $target = $_SESSION['redirect_after_login'] ?? '';
             unset($_SESSION['redirect_after_login']);
             flash('success', 'Здравствуйте, ' . $result['user']['first_name'] . '!');
-            redirect($target !== '' ? $target : homeForRole($result['user']['role']));
+            redirect($next !== '' ? $next : homeForRole($result['user']['role']));
         }
         $error = $result['error'];
     }
@@ -35,9 +43,21 @@ require __DIR__ . '/includes/header.php';
   <div class="wrap login">
     <nav class="crumbs" aria-label="Навигация"><a href="<?= url('index.php') ?>">Главная</a><span>/</span><span>Вход</span></nav>
     <h1 class="phead-title display">Вход</h1>
-    <p class="phead-lead">Личный кабинет волонтёра, панель администратора и&nbsp;разработчика.</p>
+    <?php if ($nextEvent): ?>
+      <div class="login-next">
+        <p class="kicker"><?= icon('calendar-check') ?>Мероприятие для волонтёров</p>
+        <b><?= e($nextEvent['title']) ?></b>
+        <span><?= e(ruDate($nextEvent['starts_at'], true)) ?><?= $nextEvent['location'] ? ' · ' . e($nextEvent['location']) : '' ?></span>
+        <p>Войди, и страница мероприятия откроется сразу: там можно записаться.</p>
+      </div>
+    <?php elseif ($next !== ''): ?>
+      <p class="phead-lead">Войди, чтобы открыть эту страницу. После входа она откроется сама.</p>
+    <?php else: ?>
+      <p class="phead-lead">Личный кабинет волонтёра, панель администратора и&nbsp;разработчика.</p>
+    <?php endif; ?>
     <form class="vform login-form" method="post" novalidate data-validate>
       <?= csrfField() ?>
+      <?php if ($next !== ''): ?><input type="hidden" name="next" value="<?= e($next) ?>"><?php endif; ?>
       <?php if ($error): ?>
         <div class="alert alert-error" role="alert"><?= e($error) ?></div>
       <?php endif; ?>

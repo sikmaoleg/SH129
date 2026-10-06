@@ -147,6 +147,7 @@ require __DIR__ . '/../includes/panel_header.php';
         <?php endif; ?>
         <div class="ev-act">
           <a class="btn <?= $attn ? 'btn-accent' : 'btn-line' ?> btn-sm" href="<?= url('admin/attendance.php?id=' . (int)$ev['id']) ?>"><?= icon('users') ?>Участники</a>
+          <button class="btn btn-line btn-sm" type="button" data-copy="<?= e(eventLink((int)$ev['id'])) ?>" title="<?= e(eventLink((int)$ev['id'])) ?>" aria-label="Скопировать ссылку на «<?= e($ev['title']) ?>»"><?= icon('link') ?>Ссылка</button>
           <a class="btn btn-line btn-sm" href="<?= url('admin/events.php?edit=' . (int)$ev['id'] . ($filter === 'past' ? '&filter=past' : '')) ?>" aria-label="Править «<?= e($ev['title']) ?>»"><?= icon('pencil') ?></a>
           <form method="post" class="inline-form">
             <?= csrfField() ?>

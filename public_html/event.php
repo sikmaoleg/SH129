@@ -96,7 +96,7 @@ require __DIR__ . '/includes/header.php';
           <a href="<?= url('event-ics.php?id=' . $id) ?>" class="link-arrow"><?= icon('calendar-plus') ?>Добавить в&nbsp;календарь</a>
         <?php endif; ?>
       </div>
-      <?= shareButtons(url('event.php?id=' . $id), $ev['title']) ?>
+      <?= shareButtons(eventLink($id), $ev['title']) ?>
     </div>
   </div>
 </article>

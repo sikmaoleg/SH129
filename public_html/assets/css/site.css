@@ -697,3 +697,11 @@ section{position:relative}
 .masonry figcaption a:hover{color:var(--accent-text)}
 .mosaic a{display:block;overflow:hidden;background:var(--paper-2);cursor:zoom-in}
 .staff .initials,.t .initials{display:grid;place-items:center;margin:0;font-size:clamp(56px,6vw,96px);line-height:1;color:#F7F8FF}
+
+/* Вход по ссылке на мероприятие */
+.login-next{margin:18px 0 26px;padding:18px 20px;border:2px solid var(--ink);background:var(--paper-2);display:grid;gap:4px;max-width:520px}
+.login-next .kicker{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--accent-text)}
+.login-next .kicker .icon{font-size:16px}
+.login-next b{font-size:20px;font-weight:700;line-height:1.25}
+.login-next span{color:var(--ink-2);font-size:15px}
+.login-next p:last-child{margin-top:8px;font-size:15px}

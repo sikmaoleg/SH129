@@ -168,6 +168,30 @@ function assetUrl(string $path): string
     return url($path) . '?v=' . $version;
 }
 /** Блок кнопок «Поделиться»: ВК, Telegram, копирование ссылки */
+/** Короткая ссылка на мероприятие для рассылок: sh-129-mg.ru/e/12 */
+function eventLink(int $id): string
+{
+    $link = url('e/' . $id);
+    if (str_starts_with($link, '/')) {
+        // base_url не задан: дописываем домен, чтобы ссылку можно было отправить в чат
+        $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+        $host  = preg_replace('/[^A-Za-z0-9.:\-]/', '', (string)($_SERVER['HTTP_HOST'] ?? ''));
+        if ($host !== '') {
+            $link = ($https ? 'https://' : 'http://') . $host . $link;
+        }
+    }
+    return $link;
+}
+
+/** Безопасный адрес возврата после входа: только путь на нашем сайте. */
+function safeReturnPath(string $path): string
+{
+    $path = trim($path);
+    $bad = !str_starts_with($path, '/') || str_starts_with($path, '//')
+        || strpbrk($path, "\\\r\n") !== false;
+    return $bad ? '' : $path;
+}
+
 function shareButtons(string $pageUrl, string $title): string
 {
     $u = urlencode($pageUrl);
