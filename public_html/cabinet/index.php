@@ -78,6 +78,7 @@ require __DIR__ . '/../includes/panel_header.php';
               <tr>
                 <td style="width:1%;white-space:nowrap;color:var(--muted);"><?= e(ruDate($ev['starts_at'], true)) ?></td>
                 <td><a href="<?= url('event.php?id='.(int)$ev['id']) ?>"><?= e($ev['title']) ?></a><?php if ($ev['location']): ?><div style="font-size:.83rem;color:var(--muted);"><?= e($ev['location']) ?></div><?php endif; ?></td>
+                <td style="width:1%"><button class="btn btn-line btn-sm" type="button" data-copy="<?= e(eventLink((int)$ev['id'])) ?>" aria-label="Скопировать ссылку на «<?= e($ev['title']) ?>»"><?= icon('link') ?>Ссылка</button></td>
               </tr>
             <?php endforeach; ?>
           </tbody>
@@ -124,7 +125,7 @@ require __DIR__ . '/../includes/panel_header.php';
             <td style="white-space:nowrap;"><?= e(ruDate($ev['starts_at'], true)) ?></td>
             <td><?= e($ev['title']) ?></td>
             <td style="color:var(--muted);"><?= e($ev['location'] ?: '—') ?></td>
-            <td><a href="<?= url('event.php?id='.(int)$ev['id']) ?>" class="btn btn-primary btn-sm">Записаться</a></td>
+            <td><div class="actions" style="justify-content:flex-end;flex-wrap:nowrap"><button class="btn btn-line btn-sm" type="button" data-copy="<?= e(eventLink((int)$ev['id'])) ?>" aria-label="Скопировать ссылку на «<?= e($ev['title']) ?>»"><?= icon('link') ?>Ссылка</button><a href="<?= url('event.php?id='.(int)$ev['id']) ?>" class="btn btn-primary btn-sm">Записаться</a></div></td>
           </tr>
         <?php endforeach; ?>
       </tbody>

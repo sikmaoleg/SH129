@@ -63,12 +63,15 @@ require __DIR__ . '/../includes/panel_header.php';
                   <?php if ($r['direction_title']): ?><div style="font-size:.8rem;color:var(--muted);"><?= e($r['direction_title']) ?></div><?php endif; ?></td>
               <td data-label="Место" style="color:var(--muted);"><?= e($r['location'] ?: '—') ?></td>
               <td>
+                <div class="actions" style="justify-content:flex-end;flex-wrap:nowrap">
+                <button class="btn btn-line btn-sm" type="button" data-copy="<?= e(eventLink((int)$r['id'])) ?>" aria-label="Скопировать ссылку на «<?= e($r['title']) ?>»"><?= icon('link') ?>Ссылка</button>
                 <form method="post" style="margin:0;">
                   <?= csrfField() ?>
                   <input type="hidden" name="event_id" value="<?= (int)$r['id'] ?>">
                   <input type="hidden" name="action" value="cancel">
                   <button type="submit" class="btn btn-outline btn-sm" data-confirm="Отменить запись на это мероприятие?">Отменить</button>
                 </form>
+                </div>
               </td>
             </tr>
           <?php endforeach; ?>
