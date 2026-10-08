@@ -27,7 +27,11 @@ export type RegisterPayload = {
   school?: string;
   password: string;
   password2: string;
-  agree: boolean;
+  agreePd: boolean;
+  agreePublic: boolean;
+  agreeGuardian: boolean;
+  guardianName?: string;
+  guardianPhone?: string;
 };
 
 export const authApi = {

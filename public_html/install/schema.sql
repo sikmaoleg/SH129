@@ -34,6 +34,13 @@ CREATE TABLE IF NOT EXISTS `users` (
   `approved_by`    INT UNSIGNED     NULL,
   `approved_at`    DATETIME         NULL,
   `last_login_at`  DATETIME         NULL,
+  `pd_consent_at`  DATETIME         NULL,
+  `pd_consent_version` VARCHAR(20)  NULL,
+  `public_consent` TINYINT(1)       NULL,
+  `public_consent_at` DATETIME      NULL,
+  `guardian_name`  VARCHAR(190)     NULL,
+  `guardian_phone` VARCHAR(32)      NULL,
+  `guardian_consent_at` DATETIME    NULL,
   `created_at`     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uniq_email` (`email`),
@@ -208,6 +215,23 @@ CREATE TABLE IF NOT EXISTS `hero_slides` (
 -- ---------------------------------------------------------------------
 -- Журнал действий
 -- ---------------------------------------------------------------------
+-- ---------------------------------------------------------------------
+-- Журнал согласий на обработку и распространение персональных данных
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `consent_log` (
+  `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id`    INT UNSIGNED     NULL,
+  `kind`       VARCHAR(32)  NOT NULL,
+  `action`     VARCHAR(16)  NOT NULL,
+  `version`    VARCHAR(20)      NULL,
+  `source`     VARCHAR(20)  NOT NULL,
+  `ip`         VARCHAR(45)      NULL,
+  `user_agent` VARCHAR(255)     NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `audit_log` (
   `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `user_id`    INT UNSIGNED     NULL,
@@ -253,6 +277,7 @@ INSERT IGNORE INTO `hero_slides` (`image`,`caption`,`sort`) VALUES
 ('assets/img/rain.webp','Работаем в любую погоду',60);
 
 INSERT IGNORE INTO `settings` (`key`,`value`) VALUES
+('schema_version','1'),
 ('org_name','Молодая Гвардия · Щёлково'),
 ('org_email','info@example.ru'),
 ('org_address','Московская область, г. Щёлково'),

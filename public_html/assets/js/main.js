@@ -197,16 +197,52 @@
         inp.setAttribute('aria-invalid', bad ? 'true' : 'false');
         if (bad && !firstBad) firstBad = inp;
       });
-      var agree = form.querySelector('input[name="agree"]'), agreeErr = form.querySelector('.err-agree');
-      if (agree && agreeErr) {
-        agreeErr.classList.toggle('show', !agree.checked);
-        if (!agree.checked && !firstBad) firstBad = agree;
-      }
+      // Обязательные галочки согласий
+      $$('input[type=checkbox][required]', form).forEach(function (cb) {
+        var err = form.querySelector('.err-check[data-for="' + cb.name + '"]');
+        if (err) err.classList.toggle('show', !cb.checked);
+        if (!cb.checked && !firstBad) firstBad = cb;
+      });
       if (firstBad) { e.preventDefault(); firstBad.focus(); }
     });
+    form.addEventListener('change', function (e) {
+      if (e.target.type === 'checkbox' && e.target.checked) {
+        var err = form.querySelector('.err-check[data-for="' + e.target.name + '"]');
+        if (err) err.classList.remove('show');
+      }
+    });
+    // Участнику младше 18 лет нужны данные и согласие родителя
+    var bd = form.querySelector('#birth_date'), gBox = form.querySelector('#guardianBox');
+    if (bd && gBox) {
+      var updGuardian = function () {
+        var d = bd.value ? new Date(bd.value + 'T00:00:00') : null, minor = false;
+        if (d && !isNaN(d)) {
+          var n = new Date(), age = n.getFullYear() - d.getFullYear();
+          if (n.getMonth() < d.getMonth() || (n.getMonth() === d.getMonth() && n.getDate() < d.getDate())) age--;
+          minor = age >= 0 && age < 18;
+        }
+        gBox.hidden = !minor;
+        $$('[data-guardian]', gBox).forEach(function (inp) { inp.required = minor; });
+      };
+      bd.addEventListener('change', updGuardian);
+      bd.addEventListener('input', updGuardian);
+      if (bd.value) updGuardian();
+    }
     form.addEventListener('input', function (e) {
       var fl = e.target.closest('.field');
       if (fl && fl.classList.contains('bad') && e.target.checkValidity()) fl.classList.remove('bad');
     });
+  });
+
+  /* ---------- Карта Яндекса загружается только по нажатию ---------- */
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('.map-show');
+    if (!b) return;
+    var g = b.closest('.map-gate');
+    var f = document.createElement('iframe');
+    f.src = g.getAttribute('data-map-src');
+    f.title = g.getAttribute('data-map-title') || 'Карта';
+    f.setAttribute('allowfullscreen', '');
+    g.replaceWith(f);
   });
 })();

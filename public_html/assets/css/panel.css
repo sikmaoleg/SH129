@@ -771,6 +771,10 @@ input[type=file]{max-width:100%;min-width:0;width:100%;font-size:13.5px}
 .news-photo:hover span,.news-photo input:focus-visible~span{opacity:1}
 .news-photo input:checked~span{opacity:1;background:var(--warn)}
 .news-photo:has(input:checked) img{opacity:.35}
+/* Персональные данные в профиле */
+.danger-details summary{cursor:pointer;font-size:14px;font-weight:600;color:var(--ink-2)}
+.danger-details[open] summary{color:var(--ink)}
+.switch-form .switchbox{gap:12px}
 /* ================= Адаптив ================= */
 @media (max-width:1280px){
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}

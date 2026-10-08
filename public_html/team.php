@@ -8,7 +8,7 @@ $order = ['leader', 'local_staff', 'staff'];
 $placeholders = implode(',', array_fill(0, count($order), '?'));
 $members = fetchAll(
     "SELECT id, last_name, first_name, middle_name, position, avatar
-     FROM users WHERE status = 'approved' AND position IN ($placeholders)
+     FROM users WHERE status = 'approved' AND public_consent = 1 AND position IN ($placeholders)
      ORDER BY FIELD(position, $placeholders), last_name ASC",
     array_merge($order, $order)
 );
@@ -30,7 +30,7 @@ require __DIR__ . '/includes/header.php';
 </header>
 
 <?php if (!$members): ?>
-  <section class="sec"><div class="wrap"><div class="empty"><b>Состав пока не опубликован</b>Команда появится здесь, как только администратор укажет позиции в&nbsp;панели управления.</div></div></section>
+  <section class="sec"><div class="wrap"><div class="empty"><b>Состав пока не опубликован</b>Участники команды появляются здесь после того, как дали согласие на<b>Состав пока не опубликован</b>Команда появится здесь, как только администратор укажет позиции в&nbsp;панели управления.nbsp;публикацию имени и<b>Состав пока не опубликован</b>Команда появится здесь, как только администратор укажет позиции в&nbsp;панели управления.nbsp;фото.</div></div></section>
 <?php endif; ?>
 
 <?php foreach ($groups['leader'] ?? [] as $i => $l): $name = $l['first_name'] . ' ' . $l['last_name']; ?>

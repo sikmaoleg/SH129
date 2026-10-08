@@ -76,6 +76,9 @@ function apiRequireUser(): array
     if (!$u) {
         apiError('Требуется авторизация.', 401);
     }
+    if (array_key_exists('pd_consent_at', $u) && empty($u['pd_consent_at'])) {
+        apiError('Подтвердите согласие на обработку персональных данных: войдите в личный кабинет на сайте ' . url('') . ' и примите обновлённые документы.', 403);
+    }
     return $u;
 }
 

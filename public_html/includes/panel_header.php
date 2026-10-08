@@ -29,6 +29,7 @@ if (isDev()) {
     $devIssues += empty($_SERVER['HTTPS']) ? 1 : 0;
     $devIssues += is_dir(APP_ROOT . '/install') ? 1 : 0;
     $devIssues += (($config['dev_key'] ?? '') === 'change-me-please') ? 1 : 0;
+    $devIssues += operatorInfo()['filled'] ? 0 : 1;
 }
 
 $_ph_sections = [

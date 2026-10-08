@@ -38,7 +38,7 @@ if ($statHours <= 0) {
 }
 
 $honorId = (int)setting('honor_user_id');
-$honor   = $honorId > 0 ? fetchOne("SELECT * FROM users WHERE id = ? AND status = 'approved'", [$honorId]) : null;
+$honor   = $honorId > 0 ? fetchOne("SELECT * FROM users WHERE id = ? AND status = 'approved' AND public_consent = 1", [$honorId]) : null;
 
 apiSuccess([
     'heroPhotos' => array_map(fn($s) => ['image' => url($s['image']), 'caption' => $s['caption']], $heroPhotos),

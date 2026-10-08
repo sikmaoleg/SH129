@@ -43,6 +43,10 @@ $installerGone = !is_dir(APP_ROOT . '/install');
 $checks[] = ['Установщик удалён', $installerGone ? 'да' : 'нет, папка /install на месте', $installerGone,
              'После установки папку /install нужно удалить с сервера'];
 
+$legalOk = operatorInfo()['filled'];
+$checks[] = ['Реквизиты оператора персональных данных', $legalOk ? 'заполнены' : 'не заполнены', $legalOk,
+             'Укажите наименование и ИНН организации в «Настройки → Персональные данные»: они нужны в Политике и согласиях'];
+
 $defaultKey = ($config['dev_key'] ?? '') === 'change-me-please';
 $checks[] = ['Ключ dev_key изменён', $defaultKey ? 'нет, стоит значение по умолчанию' : 'да', !$defaultKey, ''];
 

@@ -9,8 +9,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 $order = ['leader', 'local_staff', 'staff'];
 $placeholders = implode(',', array_fill(0, count($order), '?'));
 $members = fetchAll(
-    "SELECT id, last_name, first_name, middle_name, position, avatar, vk, telegram
-     FROM users WHERE status = 'approved' AND position IN ($placeholders)
+    "SELECT id, last_name, first_name, middle_name, position, avatar
+     FROM users WHERE status = 'approved' AND public_consent = 1 AND position IN ($placeholders)
      ORDER BY FIELD(position, $placeholders), last_name ASC",
     array_merge($order, $order)
 );
@@ -21,6 +21,7 @@ apiSuccess(['items' => array_map(fn($m) => [
     'position'      => $m['position'],
     'positionLabel' => positionLabel($m['position']),
     'avatar'        => $m['avatar'] ? url('uploads/avatars/' . $m['avatar']) : null,
-    'vk'            => $m['vk'],
-    'telegram'      => $m['telegram'],
+    // Ссылки на соцсети не публикуем: они не входят в согласие на распространение
+    'vk'            => null,
+    'telegram'      => null,
 ], $members)]);

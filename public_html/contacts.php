@@ -43,8 +43,7 @@ require __DIR__ . '/includes/header.php';
     </dl>
     <?php if (is_numeric($mapLat) && is_numeric($mapLon)): ?>
       <div class="cmap" data-reveal>
-        <iframe src="https://yandex.ru/map-widget/v1/?ll=<?= e($mapLon) ?>%2C<?= e($mapLat) ?>&amp;z=16&amp;pt=<?= e($mapLon) ?>,<?= e($mapLat) ?>,pm2blm"
-                title="Штаб отделения на карте: <?= e($address) ?>" loading="lazy" allowfullscreen></iframe>
+        <div class="map-gate" data-map-src="https://yandex.ru/map-widget/v1/?ll=<?= e($mapLon) ?>%2C<?= e($mapLat) ?>&amp;z=16&amp;pt=<?= e($mapLon) ?>,<?= e($mapLat) ?>,pm2blm" data-map-title="Штаб отделения на карте: <?= e($address) ?>"><button type="button" class="map-show"><?= icon('map-pin') ?>Показать карту</button><p>Карта загрузится с сервиса Яндекс.Карты</p></div>
         <a class="map-link" href="https://yandex.ru/maps/?pt=<?= e($mapLon) ?>,<?= e($mapLat) ?>&amp;z=16&amp;l=map" target="_blank" rel="noopener"><?= icon('map-pin') ?>Открыть на Яндекс.Картах</a>
       </div>
     <?php endif; ?>

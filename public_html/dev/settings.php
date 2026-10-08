@@ -22,6 +22,11 @@ $editable = [
     'stat_volunteers'    => ['Волонтёров на главной (0 — считать автоматически)', 'number'],
     'stat_events'        => ['Мероприятий на главной (0 — автоматически)', 'number'],
     'stat_hours'         => ['Часов на главной (0 — автоматически)', 'number'],
+    'legal_operator_name' => ['Оператор персональных данных', 'text'],
+    'legal_inn'           => ['ИНН оператора', 'text'],
+    'legal_ogrn'          => ['ОГРН оператора', 'text'],
+    'legal_address'       => ['Юридический адрес оператора', 'text'],
+    'legal_email'         => ['Почта для запросов по персональным данным', 'text'],
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -80,6 +85,7 @@ require __DIR__ . '/../includes/panel_header.php';
     <a href="#set-reg">Приём заявок</a>
     <a href="#set-levels">Баллы и уровни</a>
     <a href="#set-stats">Цифры на главной</a>
+    <a href="#set-legal">Персональные данные</a>
   </nav>
 
   <div class="stack">
@@ -141,6 +147,17 @@ require __DIR__ . '/../includes/panel_header.php';
             <input class="input num" type="number" min="0" id="s_<?= $key ?>" name="<?= $key ?>" value="<?= $val ?>" data-last="<?= $val ?: '' ?>" <?= $val > 0 ? '' : 'disabled' ?> aria-label="<?= e($label) ?>">
           </div>
         <?php endforeach; ?>
+      </div>
+    </section>
+
+    <section class="card set-sec" id="set-legal">
+      <div class="card-h"><div><h2>Оператор персональных данных</h2><p>Подставляется в Политику и тексты согласий на сайте</p></div><?= operatorInfo()['filled'] ? '<span class="chip ok">' . icon('check') . 'Заполнено</span>' : '<span class="chip warn">' . icon('alert') . 'Не заполнено</span>' ?></div>
+      <div class="card-b stack">
+        <?= $f('legal_operator_name', 'Полное наименование организации', 'Как в ЕГРЮЛ: юрлицо, которое отвечает за данные волонтёров (например, региональное отделение)', 'text', 'Московское областное региональное отделение ВОО «Молодая Гвардия Единой России»') ?>
+        <div class="frow"><?= $f('legal_inn', 'ИНН') ?><?= $f('legal_ogrn', 'ОГРН') ?></div>
+        <?= $f('legal_address', 'Юридический адрес', 'Если пусто, берётся адрес штаба') ?>
+        <?= $f('legal_email', 'Почта для запросов по персональным данным', 'Сюда пишут, чтобы узнать, исправить или удалить свои данные. Если пусто, берётся общая почта') ?>
+        <p class="hint">Документы: <a href="<?= url('privacy.php') ?>" target="_blank" rel="noopener">Политика</a>, <a href="<?= url('consent.php') ?>" target="_blank" rel="noopener">Согласие на обработку</a>, <a href="<?= url('consent-public.php') ?>" target="_blank" rel="noopener">Согласие на распространение</a>.</p>
       </div>
     </section>
 

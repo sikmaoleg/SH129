@@ -35,12 +35,17 @@
             <a href="<?= url('events.php') ?>">Мероприятия</a>
             <a href="<?= url('login.php') ?>">Личный кабинет</a>
           </div>
+          <div>
+            <h4>Документы</h4>
+            <a href="<?= url('privacy.php') ?>">Политика обработки персональных данных</a>
+            <a href="<?= url('consent.php') ?>">Согласие на обработку данных</a>
+            <a href="<?= url('consent-public.php') ?>">Согласие на публикацию</a>
+          </div>
         </nav>
       </div>
       <?php if ($hasMap): ?>
         <div class="foot-map">
-          <iframe src="https://yandex.ru/map-widget/v1/?ll=<?= e($mapLon) ?>%2C<?= e($mapLat) ?>&amp;z=16&amp;pt=<?= e($mapLon) ?>,<?= e($mapLat) ?>,pm2blm"
-                  title="Штаб отделения на карте: <?= e($orgAddress) ?>" loading="lazy" allowfullscreen></iframe>
+          <div class="map-gate" data-map-src="https://yandex.ru/map-widget/v1/?ll=<?= e($mapLon) ?>%2C<?= e($mapLat) ?>&amp;z=16&amp;pt=<?= e($mapLon) ?>,<?= e($mapLat) ?>,pm2blm" data-map-title="Штаб отделения на карте: <?= e($orgAddress) ?>"><button type="button" class="map-show"><?= icon('map-pin') ?>Показать карту</button><p>Карта загрузится с сервиса Яндекс.Карты</p></div>
           <a class="map-link" href="https://yandex.ru/maps/?pt=<?= e($mapLon) ?>,<?= e($mapLat) ?>&amp;z=16&amp;l=map" target="_blank" rel="noopener"><?= icon('map-pin') ?>Открыть на Яндекс.Картах</a>
         </div>
       <?php endif; ?>

@@ -17,75 +17,28 @@ if ($action === 'register') {
         apiError('Приём заявок временно закрыт.', 403);
     }
 
-    $old = [
-        'last_name'   => trim((string)($in['lastName'] ?? '')),
-        'first_name'  => trim((string)($in['firstName'] ?? '')),
-        'middle_name' => trim((string)($in['middleName'] ?? '')),
-        'email'       => mb_strtolower(trim((string)($in['email'] ?? ''))),
-        'phone'       => trim((string)($in['phone'] ?? '')),
-        'birth_date'  => trim((string)($in['birthDate'] ?? '')),
-        'vk'          => trim((string)($in['vk'] ?? '')),
-        'telegram'    => trim((string)($in['telegram'] ?? '')),
-        'school'      => trim((string)($in['school'] ?? '')),
-    ];
-    $password  = (string)($in['password'] ?? '');
-    $password2 = (string)($in['password2'] ?? '');
-    $agree     = !empty($in['agree']);
-
-    $errors = [];
-    if ($old['last_name'] === '')  $errors[] = 'Укажите фамилию.';
-    if ($old['first_name'] === '') $errors[] = 'Укажите имя.';
-
-    if ($old['email'] === '') {
-        $errors[] = 'Укажите электронную почту.';
-    } elseif (!filter_var($old['email'], FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'Электронная почта указана в неверном формате.';
-    } elseif (fetchValue('SELECT id FROM users WHERE email = ?', [$old['email']])) {
-        $errors[] = 'Этот адрес уже зарегистрирован. Попробуйте войти.';
+    // Старые версии приложения присылают agree, новые agreePd
+    $result = registerVolunteer([
+        'last_name'      => $in['lastName'] ?? '',
+        'first_name'     => $in['firstName'] ?? '',
+        'middle_name'    => $in['middleName'] ?? '',
+        'email'          => $in['email'] ?? '',
+        'phone'          => $in['phone'] ?? '',
+        'birth_date'     => $in['birthDate'] ?? '',
+        'vk'             => $in['vk'] ?? '',
+        'telegram'       => $in['telegram'] ?? '',
+        'school'         => $in['school'] ?? '',
+        'password'       => $in['password'] ?? '',
+        'password2'      => $in['password2'] ?? '',
+        'agree_pd'       => !empty($in['agreePd']) || !empty($in['agree']),
+        'agree_public'   => !empty($in['agreePublic']),
+        'guardian_name'  => $in['guardianName'] ?? '',
+        'guardian_phone' => $in['guardianPhone'] ?? '',
+        'agree_guardian' => !empty($in['agreeGuardian']),
+    ], 'app');
+    if (isset($result['errors'])) {
+        apiError(implode(' ', array_unique(array_values($result['errors']))), 422);
     }
-
-    if ($old['phone'] === '') {
-        $errors[] = 'Укажите номер телефона — по нему с вами свяжется администратор.';
-    }
-
-    if ($old['birth_date'] === '') {
-        $errors[] = 'Укажите дату рождения.';
-    } else {
-        $ts = strtotime($old['birth_date']);
-        if (!$ts || $ts > time()) {
-            $errors[] = 'Дата рождения указана неверно.';
-        } else {
-            $age = (int)((new DateTime($old['birth_date']))->diff(new DateTime())->y);
-            if ($age < 14)  $errors[] = 'Вступить в организацию можно с 14 лет.';
-            if ($age > 100) $errors[] = 'Проверьте дату рождения.';
-        }
-    }
-
-    if (mb_strlen($password) < 8)   $errors[] = 'Пароль должен быть не короче 8 символов.';
-    if ($password !== $password2)   $errors[] = 'Пароли не совпадают.';
-    if (!$agree)                    $errors[] = 'Нужно согласие на обработку персональных данных.';
-
-    if ($errors) {
-        apiError(implode(' ', $errors), 422);
-    }
-
-    q('INSERT INTO users (email, password_hash, last_name, first_name, middle_name,
-                          phone, birth_date, vk, telegram, school, role, status)
-       VALUES (?,?,?,?,?,?,?,?,?,?,\'volunteer\',\'pending\')', [
-        $old['email'],
-        password_hash($password, PASSWORD_DEFAULT),
-        $old['last_name'],
-        $old['first_name'],
-        $old['middle_name'] ?: null,
-        $old['phone'],
-        $old['birth_date'],
-        $old['vk'] ?: null,
-        $old['telegram'] ?: null,
-        $old['school'] ?: null,
-    ]);
-    $newId = (int)db()->lastInsertId();
-    q('INSERT INTO audit_log (user_id, action, entity, entity_id, meta, ip) VALUES (?,?,?,?,?,?)',
-      [$newId, 'register', 'user', $newId, $old['email'], $_SERVER['REMOTE_ADDR'] ?? null]);
 
     apiSuccess(['message' => 'Заявка отправлена. Вход откроется после одобрения администратором.']);
 }
@@ -101,8 +54,12 @@ if ($action === 'login') {
         apiError('Укажите почту и пароль.', 422);
     }
 
+    if (loginThrottled()) {
+        apiError('Слишком много неудачных попыток входа. Подождите 15 минут.', 429);
+    }
     $user = fetchOne('SELECT * FROM users WHERE email = ?', [$email]);
     if (!$user || !password_verify($password, $user['password_hash'])) {
+        logAction('login_failed', 'user', $user ? (int)$user['id'] : null);
         apiError('Неверная почта или пароль.', 401);
     }
 

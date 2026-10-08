@@ -59,6 +59,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('cabinet/profile.php');
     }
 
+    if ($action === 'public_consent') {
+        $on = ($_POST['value'] ?? '') === '1';
+        setPublicConsent((int)$me['id'], $on, 'site');
+        logAction($on ? 'public_consent_on' : 'public_consent_off', 'user', (int)$me['id']);
+        flash('success', $on ? 'Готово: имя и фото могут показываться в команде и на доске почёта.' : 'Готово: имя и фото больше не показываются на открытых страницах сайта.');
+        redirect('cabinet/profile.php#privacy');
+    }
+
+    if ($action === 'export') {
+        // Право субъекта знать, какие данные о нём хранятся (ст. 14 152-ФЗ)
+        $uid = (int)$me['id'];
+        $data = [
+            'выгружено' => date('Y-m-d H:i:s'),
+            'оператор' => operatorInfo()['name'],
+            'анкета' => array_intersect_key($me, array_flip(['email', 'last_name', 'first_name', 'middle_name', 'phone',
+                'birth_date', 'vk', 'telegram', 'school', 'about', 'avatar', 'role', 'position', 'status', 'points', 'hours',
+                'mger_joined_at', 'created_at', 'approved_at', 'last_login_at', 'pd_consent_at', 'pd_consent_version',
+                'public_consent', 'public_consent_at', 'guardian_name', 'guardian_phone', 'guardian_consent_at'])),
+            'записи_на_мероприятия' => fetchAll('SELECT e.title, e.starts_at, r.status, r.points_awarded, r.created_at
+                FROM event_registrations r JOIN events e ON e.id = r.event_id WHERE r.user_id = ? ORDER BY e.starts_at', [$uid]),
+            'начисления_баллов' => fetchAll('SELECT points, reason, created_at FROM point_transactions WHERE user_id = ? ORDER BY created_at', [$uid]),
+            'достижения' => fetchAll('SELECT b.title, ub.awarded_at FROM user_badges ub JOIN badges b ON b.id = ub.badge_id WHERE ub.user_id = ?', [$uid]),
+            'согласия' => fetchAll('SELECT kind, action, version, source, created_at FROM consent_log WHERE user_id = ? ORDER BY created_at', [$uid]),
+            'журнал_входов' => fetchAll("SELECT action, ip, created_at FROM audit_log WHERE user_id = ? AND action IN ('login','logout') ORDER BY created_at DESC LIMIT 100", [$uid]),
+        ];
+        logAction('data_export', 'user', $uid);
+        header('Content-Type: application/json; charset=utf-8');
+        header('Content-Disposition: attachment; filename="moi-dannye.json"');
+        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    if ($action === 'delete_account') {
+        if ($me['role'] === 'dev') {
+            $errors[] = 'Учётную запись разработчика удалить нельзя, пока на сайте нет другого разработчика.';
+        } elseif (!password_verify((string)($_POST['password'] ?? ''), $me['password_hash'])) {
+            $errors[] = 'Пароль для удаления указан неверно.';
+        } else {
+            deleteUserData((int)$me['id'], 'self');
+            logout();
+            session_start();
+            session_regenerate_id(true); // новая сессия, чтобы сообщение дошло после выхода
+            flash('info', 'Учётная запись и ваши данные удалены. Спасибо, что были с нами.');
+            redirect('index.php');
+        }
+    }
+
     if ($action === 'password') {
         $cur  = (string)($_POST['current_password'] ?? '');
         $new  = (string)($_POST['new_password'] ?? '');
@@ -167,6 +214,37 @@ require __DIR__ . '/../includes/panel_header.php';
           <tr><th>Дата регистрации</th><td><?= e(ruDate($me['created_at'])) ?></td></tr>
           <tr><th>Одобрена</th><td><?= e(ruDate($me['approved_at'])) ?></td></tr>
         </table>
+      </div>
+    </div>
+
+    <div class="card" id="privacy">
+      <div class="card-head"><div><h2>Персональные данные</h2><p>Ваши согласия и права по закону о персональных данных</p></div></div>
+      <div class="card-body stack">
+        <p style="font-size:14px;color:var(--ink-2)">Согласие на обработку дано <?= e(ruDate((string)$me['pd_consent_at'], true)) ?>. Документы: <a href="<?= url('privacy.php') ?>" target="_blank" rel="noopener">Политика</a>, <a href="<?= url('consent.php') ?>" target="_blank" rel="noopener">согласие</a>, <a href="<?= url('consent-public.php') ?>" target="_blank" rel="noopener">согласие на распространение</a>.</p>
+        <form method="post" class="switch-form">
+          <?= csrfField() ?>
+          <input type="hidden" name="action" value="public_consent">
+          <input type="hidden" name="value" value="<?= (int)$me['public_consent'] === 1 ? '0' : '1' ?>">
+          <div class="switchbox" style="cursor:default">
+            <span><b>Показывать имя и фото на сайте</b><small><?= (int)$me['public_consent'] === 1 ? 'Включено: вы можете быть в команде и на доске почёта' : 'Выключено: на открытых страницах вас не видно' ?></small></span>
+            <button type="submit" class="btn btn-sm <?= (int)$me['public_consent'] === 1 ? 'btn-outline' : 'btn-primary' ?>"><?= (int)$me['public_consent'] === 1 ? 'Выключить' : 'Включить' ?></button>
+          </div>
+        </form>
+        <form method="post">
+          <?= csrfField() ?>
+          <input type="hidden" name="action" value="export">
+          <button type="submit" class="btn btn-outline btn-sm"><?= icon('download') ?>Скачать мои данные</button>
+        </form>
+        <details class="danger-details">
+          <summary>Отозвать согласие и удалить учётную запись</summary>
+          <form method="post" class="stack" style="margin-top:12px">
+            <?= csrfField() ?>
+            <input type="hidden" name="action" value="delete_account">
+            <p style="font-size:14px;color:var(--ink-2)">Удалятся анкета, записи на мероприятия, баллы, достижения и фото. Восстановить их будет нельзя.</p>
+            <div class="field"><label for="del_password">Пароль для подтверждения</label><input id="del_password" type="password" name="password" autocomplete="current-password" required></div>
+            <div><button type="submit" class="btn btn-danger btn-sm" data-confirm="Удалить учётную запись и все данные безвозвратно?"><?= icon('trash') ?>Удалить учётную запись</button></div>
+          </form>
+        </details>
       </div>
     </div>
   </div>

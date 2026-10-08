@@ -57,15 +57,30 @@ function isDev(): bool
     return userRole() === 'dev';
 }
 
+/** Защита от подбора пароля: не больше 10 неудачных попыток с одного IP за 15 минут. */
+function loginThrottled(): bool
+{
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    if ($ip === '') {
+        return false;
+    }
+    return (int)fetchValue("SELECT COUNT(*) FROM audit_log WHERE action = 'login_failed' AND ip = ?
+                            AND created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE)", [$ip]) >= 10;
+}
+
 /** Попытка входа. Возвращает ['ok'=>bool,'error'=>string,'user'=>array] */
 function attemptLogin(string $email, string $password): array
 {
     $email = mb_strtolower(trim($email));
+    if (loginThrottled()) {
+        return ['ok' => false, 'error' => 'Слишком много неудачных попыток входа. Подождите 15 минут и попробуйте снова.'];
+    }
     $user  = fetchOne('SELECT * FROM users WHERE email = ?', [$email]);
 
     // Одинаковая формулировка для несуществующего адреса и неверного пароля,
     // чтобы нельзя было подобрать список зарегистрированных адресов.
     if (!$user || !password_verify($password, $user['password_hash'])) {
+        logAction('login_failed', 'user', $user ? (int)$user['id'] : null);
         return ['ok' => false, 'error' => 'Неверная почта или пароль.'];
     }
 
@@ -122,6 +137,12 @@ function requireLogin(): array
         $back = safeReturnPath($_SERVER['REQUEST_URI'] ?? '');
         $_SESSION['redirect_after_login'] = $back;
         redirect('login.php' . ($back !== '' ? '?next=' . urlencode($back) : ''));
+    }
+    // Кто зарегистрировался до новых документов, сначала подтверждает согласие (152-ФЗ, ст. 9)
+    $onGate = str_ends_with((string)($_SERVER['SCRIPT_NAME'] ?? ''), '/cabinet/consent.php');
+    if (array_key_exists('pd_consent_at', $user) && empty($user['pd_consent_at']) && !$onGate) {
+        $back = safeReturnPath($_SERVER['REQUEST_URI'] ?? '');
+        redirect('cabinet/consent.php' . ($back !== '' ? '?next=' . urlencode($back) : ''));
     }
     return $user;
 }

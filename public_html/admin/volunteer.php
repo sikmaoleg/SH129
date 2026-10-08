@@ -27,6 +27,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             logAction('mger_joined_update', 'user', $userId, $joined);
             flash('success', 'Дата вступления сохранена.');
         }
+    } elseif ($action === 'public_consent') {
+        $on = ($_POST['value'] ?? '') === '1';
+        setPublicConsent($userId, $on, $on ? 'paper' : 'admin');
+        logAction($on ? 'public_consent_paper' : 'public_consent_off', 'user', $userId);
+        flash('success', $on
+            ? 'Отмечено: письменное согласие на публикацию получено. Волонтёр может появиться в команде и на доске почёта.'
+            : 'Публикация отключена: волонтёр больше не показывается на открытых страницах сайта.');
+    } elseif ($action === 'delete_data') {
+        if ($userId === (int)$me['id']) {
+            flash('error', 'Свою учётную запись удаляйте в личном кабинете.');
+        } elseif ($v['role'] !== 'volunteer' && !isDev()) {
+            flash('error', 'Удалить администратора или разработчика может только разработчик.');
+        } elseif (mb_strtolower(trim((string)($_POST['confirm_name'] ?? ''))) !== mb_strtolower($v['last_name'])) {
+            flash('error', 'Для подтверждения введите фамилию волонтёра.');
+        } else {
+            $who = $v['first_name'] . ' ' . $v['last_name'];
+            deleteUserData($userId, 'admin');
+            logAction('user_delete', 'user', null, 'по запросу на удаление данных');
+            flash('success', 'Данные волонтёра ' . $who . ' удалены.');
+            redirect('admin/users.php');
+        }
     } elseif ($action === 'badge_award') {
         $badgeId = (int)($_POST['badge_id'] ?? 0);
         if ($badgeId && fetchValue('SELECT id FROM badges WHERE id = ?', [$badgeId])) {
@@ -217,6 +238,43 @@ require __DIR__ . '/../includes/panel_header.php';
     </section>
   </div>
 </div>
+
+<section class="card" style="margin-top:18px">
+  <div class="card-h"><div><h2>Персональные данные</h2><p>Согласия волонтёра и удаление данных по его запросу</p></div></div>
+  <ul class="list">
+    <li>
+      <span class="dot <?= $v['pd_consent_at'] ? 'ok' : 'warn' ?>"><?= icon($v['pd_consent_at'] ? 'check' : 'alert') ?></span>
+      <div class="grow"><b>Согласие на обработку</b><small><?= $v['pd_consent_at'] ? 'Дано ' . e(ruDate($v['pd_consent_at'], true)) . ', редакция ' . e(ruDate((string)$v['pd_consent_version'])) : 'Ещё не подтверждено: волонтёр подтвердит при следующем входе в кабинет' ?></small></div>
+    </li>
+    <li>
+      <span class="dot <?= (int)$v['public_consent'] === 1 ? 'ok' : '' ?>"><?= icon((int)$v['public_consent'] === 1 ? 'eye' : 'eye-off') ?></span>
+      <div class="grow"><b>Публикация имени и фото на сайте</b><small><?= (int)$v['public_consent'] === 1 ? 'Разрешена с ' . e(ruDate((string)$v['public_consent_at'], true)) . '. Может быть в команде и на доске почёта.' : 'Не разрешена: на открытых страницах сайта не показывается.' ?></small></div>
+      <form method="post" style="margin:0">
+        <?= csrfField() ?>
+        <input type="hidden" name="action" value="public_consent">
+        <input type="hidden" name="value" value="<?= (int)$v['public_consent'] === 1 ? '0' : '1' ?>">
+        <?php if ((int)$v['public_consent'] === 1): ?>
+          <button class="btn btn-line btn-sm" type="submit" data-confirm="Отключить публикацию? Волонтёр пропадёт из команды и с доски почёта.">Отключить</button>
+        <?php else: ?>
+          <button class="btn btn-line btn-sm" type="submit" data-confirm="Отмечайте, только если волонтёр подписал согласие на распространение на бумаге. Сохранить отметку?">Есть письменное согласие</button>
+        <?php endif; ?>
+      </form>
+    </li>
+    <?php if ($v['guardian_name'] || (ageFromBirthDate($v['birth_date']) ?? 99) < 18): ?>
+      <li>
+        <span class="dot <?= $v['guardian_consent_at'] ? 'ok' : 'warn' ?>"><?= icon('users') ?></span>
+        <div class="grow"><b>Законный представитель</b><small><?= $v['guardian_name'] ? e($v['guardian_name']) . ($v['guardian_phone'] ? ', ' . e($v['guardian_phone']) : '') . ($v['guardian_consent_at'] ? '. Согласие подтверждено ' . e(ruDate($v['guardian_consent_at'])) : '') : 'Не указан. Волонтёру нет 18 лет: укажет при подтверждении согласия в кабинете.' ?></small></div>
+      </li>
+    <?php endif; ?>
+  </ul>
+  <form method="post" class="card-f danger-zone" style="justify-content:flex-start;border-style:dashed">
+    <?= csrfField() ?>
+    <input type="hidden" name="action" value="delete_data">
+    <p>Если волонтёр отозвал согласие или попросил удалить данные: учётная запись, записи на мероприятия, баллы и достижения удалятся безвозвратно.</p>
+    <input class="input" name="confirm_name" placeholder="Фамилия для подтверждения" aria-label="Фамилия для подтверждения" style="max-width:240px" required>
+    <button class="btn btn-ghost" type="submit" data-confirm="Удалить все данные волонтёра безвозвратно?"><?= icon('trash') ?>Удалить данные</button>
+  </form>
+</section>
 
 <div class="grid g2" style="margin-top:18px">
   <section class="card">

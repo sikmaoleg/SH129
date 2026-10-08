@@ -46,12 +46,13 @@ $news = fetchAll(
 
 $team = fetchAll(
     "SELECT id, last_name, first_name, position, avatar FROM users
-     WHERE status = 'approved' AND position IN ('leader','local_staff')
+     WHERE status = 'approved' AND public_consent = 1 AND position IN ('leader','local_staff')
      ORDER BY FIELD(position, 'leader', 'local_staff'), (avatar IS NULL), last_name ASC LIMIT 7"
 );
 
 $honorId = (int)setting('honor_user_id');
-$honor   = $honorId > 0 ? fetchOne("SELECT * FROM users WHERE id = ? AND status = 'approved'", [$honorId]) : null;
+// На открытых страницах показываем только тех, кто дал согласие на распространение (ст. 10.1 152-ФЗ)
+$honor   = $honorId > 0 ? fetchOne("SELECT * FROM users WHERE id = ? AND status = 'approved' AND public_consent = 1", [$honorId]) : null;
 $registrationOpen = setting('registration_open', '1') === '1';
 
 require __DIR__ . '/includes/header.php';

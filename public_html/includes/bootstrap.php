@@ -525,6 +525,13 @@ function actionLabel(string $action): array
 {
     return [
         'login'                    => ['Вход в панель', 'sign-in', ''],
+        'login_failed'             => ['Неудачная попытка входа', 'alert', 'warn'],
+        'consent_confirm'          => ['Подтвердил согласие на обработку данных', 'check-circle', 'ok'],
+        'public_consent_on'        => ['Разрешил показ имени и фото на сайте', 'eye', 'info'],
+        'public_consent_off'       => ['Отключил показ имени и фото на сайте', 'eye-off', ''],
+        'public_consent_paper'     => ['Отмечено письменное согласие на публикацию', 'eye', 'info'],
+        'data_export'              => ['Скачал свои данные', 'download', ''],
+        'user_delete'              => ['Удалены данные волонтёра', 'trash', 'warn'],
         'logout'                   => ['Выход', 'sign-out', ''],
         'register'                 => ['Заявка на вступление', 'user-plus', 'info'],
         'user_approve'             => ['Заявка одобрена', 'check-circle', 'ok'],
@@ -642,4 +649,11 @@ function logAction(string $action, ?string $entity = null, ?int $entityId = null
 }
 
 require_once __DIR__ . '/icons.php';
+require_once __DIR__ . '/privacy.php';
+try {
+    ensureSchema();
+    privacyHousekeeping();
+} catch (Throwable $e) {
+    error_log('privacy bootstrap: ' . $e->getMessage()); // например, во время установки, пока нет таблиц
+}
 require_once __DIR__ . '/auth.php';

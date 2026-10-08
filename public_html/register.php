@@ -17,88 +17,37 @@ $done   = false;
 $old    = [
     'last_name' => '', 'first_name' => '', 'middle_name' => '', 'email' => '',
     'phone' => '', 'birth_date' => '', 'vk' => '', 'telegram' => '', 'school' => '',
+    'guardian_name' => '', 'guardian_phone' => '',
 ];
+$checks = ['agree_pd' => false, 'agree_public' => false, 'agree_guardian' => false];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($closed)) {
     csrfCheck();
-
     foreach ($old as $k => $_) {
         $old[$k] = trim((string)($_POST[$k] ?? ''));
     }
-    $password = (string)($_POST['password'] ?? '');
-    $password2 = (string)($_POST['password2'] ?? '');
-    $agree     = !empty($_POST['agree']);
-
-    // --- Проверки ---
-    if ($old['last_name'] === '')  $errors[] = 'Укажите фамилию.';
-    if ($old['first_name'] === '') $errors[] = 'Укажите имя.';
-
-    $old['email'] = mb_strtolower($old['email']);
-    if ($old['email'] === '') {
-        $errors[] = 'Укажите электронную почту.';
-    } elseif (!filter_var($old['email'], FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'Электронная почта указана в неверном формате.';
-    } elseif (fetchValue('SELECT id FROM users WHERE email = ?', [$old['email']])) {
-        $errors[] = 'Этот адрес уже зарегистрирован. Попробуйте войти.';
+    foreach ($checks as $k => $_) {
+        $checks[$k] = !empty($_POST[$k]);
     }
-
-    if ($old['phone'] === '') {
-        $errors[] = 'Укажите номер телефона — по нему с вами свяжется администратор.';
-    }
-
-    if ($old['birth_date'] === '') {
-        $errors[] = 'Укажите дату рождения.';
+    $result = registerVolunteer($old + $checks + [
+        'password'  => (string)($_POST['password'] ?? ''),
+        'password2' => (string)($_POST['password2'] ?? ''),
+    ], 'site');
+    if (isset($result['errors'])) {
+        $errors = $result['errors'];
     } else {
-        $ts = strtotime($old['birth_date']);
-        if (!$ts || $ts > time()) {
-            $errors[] = 'Дата рождения указана неверно.';
-        } else {
-            $age = (int)((new DateTime($old['birth_date']))->diff(new DateTime())->y);
-            if ($age < 14) {
-                $errors[] = 'Вступить в организацию можно с 14 лет.';
-            }
-            if ($age > 100) {
-                $errors[] = 'Проверьте дату рождения.';
-            }
-        }
-    }
-
-    if (mb_strlen($password) < 8) {
-        $errors[] = 'Пароль должен быть не короче 8 символов.';
-    }
-    if ($password !== $password2) {
-        $errors[] = 'Пароли не совпадают.';
-    }
-    if (!$agree) {
-        $errors[] = 'Нужно согласие на обработку персональных данных.';
-    }
-
-    // --- Сохранение ---
-    if (!$errors) {
-        q('INSERT INTO users (email, password_hash, last_name, first_name, middle_name,
-                              phone, birth_date, vk, telegram, school, role, status)
-           VALUES (?,?,?,?,?,?,?,?,?,?,\'volunteer\',\'pending\')', [
-            $old['email'],
-            password_hash($password, PASSWORD_DEFAULT),
-            $old['last_name'],
-            $old['first_name'],
-            $old['middle_name'] ?: null,
-            $old['phone'],
-            $old['birth_date'],
-            $old['vk'] ?: null,
-            $old['telegram'] ?: null,
-            $old['school'] ?: null,
-        ]);
-        $newId = (int)db()->lastInsertId();
-        logAction('register', 'user', $newId, $old['email']);
         $done = true;
     }
 }
 
+// Блок родителя показываем сразу, если по дате рождения участнику нет 18
+$age = ageFromBirthDate($old['birth_date'] ?: null);
+$isMinor = $age !== null && $age < 18;
+
 require __DIR__ . '/includes/header.php';
 
 /** Поле анкеты: подпись сверху, подсказка и текст ошибки снизу. */
-$field = function (string $name, string $label, array $opt = []) use ($old): string {
+$field = function (string $name, string $label, array $opt = []) use ($old, $errors): string {
     $req  = !empty($opt['required']);
     $type = $opt['type'] ?? 'text';
     $attrs = '';
@@ -106,10 +55,10 @@ $field = function (string $name, string $label, array $opt = []) use ($old): str
         $attrs .= ' ' . $k . '="' . e($v) . '"';
     }
     $value = in_array($type, ['password'], true) ? '' : ' value="' . e($old[$name] ?? '') . '"';
-    return '<div class="field"><label for="' . $name . '">' . e($label) . ($req ? ' <i>*</i>' : '') . '</label>'
+    return '<div class="field' . (isset($errors[$name]) ? ' bad' : '') . '"><label for="' . $name . '">' . e($label) . ($req ? ' <i>*</i>' : '') . '</label>'
          . '<input type="' . $type . '" id="' . $name . '" name="' . $name . '"' . $value . ($req ? ' required' : '') . $attrs . '>'
          . (!empty($opt['hint']) ? '<p class="hint">' . e($opt['hint']) . '</p>' : '')
-         . (!empty($opt['err']) ? '<p class="err">' . e($opt['err']) . '</p>' : '')
+         . (!empty($opt['err']) || isset($errors[$name]) ? '<p class="err">' . e($errors[$name] ?? $opt['err']) . '</p>' : '')
          . '</div>';
 };
 ?>
@@ -140,7 +89,7 @@ $field = function (string $name, string $label, array $opt = []) use ($old): str
       <form class="vform" method="post" novalidate data-validate>
         <?= csrfField() ?>
         <?php if ($errors): ?>
-          <div class="alert alert-error" role="alert"><b>Проверь анкету:</b><ul><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul></div>
+          <div class="alert alert-error" role="alert"><b>Проверь анкету:</b><ul><?php foreach (array_unique(array_values($errors)) as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul></div>
         <?php endif; ?>
         <fieldset>
           <legend>О себе</legend>
@@ -172,8 +121,23 @@ $field = function (string $name, string $label, array $opt = []) use ($old): str
             <?= $field('password2', 'Повтори пароль', ['type' => 'password', 'required' => true, 'err' => 'Пароли не совпадают', 'attrs' => ['minlength' => '8', 'autocomplete' => 'new-password']]) ?>
           </div>
         </fieldset>
-        <label class="check"><input type="checkbox" name="agree" value="1" required><span>Согласен на&nbsp;обработку персональных данных для целей работы волонтёрского отделения <i>*</i></span></label>
-        <p class="err err-agree">Нужно согласие на&nbsp;обработку данных</p>
+        <fieldset class="guardian" id="guardianBox" <?= $isMinor || isset($errors['guardian_name']) ? '' : 'hidden' ?>>
+          <legend>Родитель или законный представитель</legend>
+          <p class="guardian-note"><?= icon('info') ?><span>Тебе меньше 18 лет, поэтому анкету подаём с&nbsp;согласия родителя или законного представителя. Покажи ему <a href="<?= url('consent.php') ?>" target="_blank" rel="noopener">согласие</a> и&nbsp;укажи его контакты: администратор может позвонить для подтверждения.</span></p>
+          <div class="frow">
+            <?= $field('guardian_name', 'ФИО родителя или представителя', ['required' => $isMinor, 'err' => 'Укажи ФИО полностью', 'attrs' => ['autocomplete' => 'off', 'data-guardian' => '1']]) ?>
+            <?= $field('guardian_phone', 'Его телефон', ['type' => 'tel', 'required' => $isMinor, 'err' => 'Укажи телефон', 'attrs' => ['inputmode' => 'tel', 'placeholder' => '+7 900 000-00-00', 'data-guardian' => '1']]) ?>
+          </div>
+          <label class="check"><input type="checkbox" name="agree_guardian" value="1" data-guardian="1" <?= $checks['agree_guardian'] ? 'checked' : '' ?> <?= $isMinor ? 'required' : '' ?>><span>Мой родитель или законный представитель ознакомлен с&nbsp;согласием и&nbsp;Политикой и&nbsp;согласен на&nbsp;обработку моих персональных данных <i>*</i></span></label>
+          <p class="err err-check <?= isset($errors['agree_guardian']) ? 'show' : '' ?>" data-for="agree_guardian">Нужно подтверждение родителя или представителя</p>
+        </fieldset>
+
+        <fieldset class="consents">
+          <legend>Согласия</legend>
+          <label class="check"><input type="checkbox" name="agree_pd" value="1" required <?= $checks['agree_pd'] ? 'checked' : '' ?>><span>Даю <a href="<?= url('consent.php') ?>" target="_blank" rel="noopener">согласие на&nbsp;обработку персональных данных</a> и&nbsp;подтверждаю, что ознакомлен(а) с&nbsp;<a href="<?= url('privacy.php') ?>" target="_blank" rel="noopener">Политикой обработки персональных данных</a> <i>*</i></span></label>
+          <p class="err err-check <?= isset($errors['agree_pd']) ? 'show' : '' ?>" data-for="agree_pd">Без этого согласия мы не можем принять анкету</p>
+          <label class="check"><input type="checkbox" name="agree_public" value="1" <?= $checks['agree_public'] ? 'checked' : '' ?>><span>Разрешаю показывать моё имя и&nbsp;фото на&nbsp;сайте, в&nbsp;команде и&nbsp;на&nbsp;доске почёта (<a href="<?= url('consent-public.php') ?>" target="_blank" rel="noopener">согласие на&nbsp;распространение</a>). Необязательно, можно изменить в&nbsp;личном кабинете.</span></label>
+        </fieldset>
         <button class="btn btn-accent btn-lg btn-block" type="submit">Отправить заявку<?= icon('arrow-right') ?></button>
         <p class="form-foot">Уже в&nbsp;организации? <a href="<?= url('login.php') ?>">Войти</a></p>
       </form>

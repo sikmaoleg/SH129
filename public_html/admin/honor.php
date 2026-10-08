@@ -12,9 +12,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $note   = mb_substr(trim((string)($_POST['note'] ?? '')), 0, 160);
 
     if ($userId > 0) {
-        $target = fetchOne("SELECT id FROM users WHERE id = ? AND status = 'approved'", [$userId]);
+        $target = fetchOne("SELECT id, public_consent FROM users WHERE id = ? AND status = 'approved'", [$userId]);
         if (!$target) {
             flash('error', 'Волонтёр не найден.');
+            redirect('admin/honor.php');
+        }
+        if ((int)$target['public_consent'] !== 1) {
+            flash('error', 'У этого волонтёра нет согласия на публикацию имени и фото, поэтому на главной его показать нельзя. Попросите включить согласие в личном кабинете или отметьте письменное согласие в его карточке.');
             redirect('admin/honor.php');
         }
     }
@@ -27,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $volunteers = fetchAll(
-    "SELECT u.id, u.last_name, u.first_name, u.position, u.avatar,
+    "SELECT u.id, u.last_name, u.first_name, u.position, u.avatar, u.public_consent,
             COALESCE((SELECT SUM(t.points) FROM point_transactions t
                       WHERE t.user_id = u.id AND t.created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')), 0) AS month_pts
      FROM users u
@@ -38,7 +42,7 @@ $currentId   = (int)setting('honor_user_id');
 $currentNote = setting('honor_note');
 $months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
 $monthTitle = mb_convert_case($months[(int)date('n') - 1], MB_CASE_TITLE) . ' ' . date('Y');
-$candidates = array_slice(array_filter($volunteers, fn($v) => (int)$v['month_pts'] > 0), 0, 3);
+$candidates = array_slice(array_filter($volunteers, fn($v) => (int)$v['month_pts'] > 0 && (int)$v['public_consent'] === 1), 0, 3);
 $current = null;
 foreach ($volunteers as $v) { if ((int)$v['id'] === $currentId) { $current = $v; } }
 
@@ -52,7 +56,7 @@ require __DIR__ . '/../includes/panel_header.php';
   <section class="card">
     <div class="card-h">
       <div><h2>Волонтёр месяца</h2><p><?= e($monthTitle) ?></p></div>
-      <?= $current ? '<span class="chip ok">' . icon('eye') . 'На сайте</span>' : '<span class="chip">' . icon('eye-off') . 'Скрыта</span>' ?>
+      <?= $current && (int)$current['public_consent'] === 1 ? '<span class="chip ok">' . icon('eye') . 'На сайте</span>' : '<span class="chip">' . icon('eye-off') . 'Скрыта</span>' ?>
     </div>
     <form method="post" class="card-b stack">
       <?= csrfField() ?>
@@ -65,11 +69,11 @@ require __DIR__ . '/../includes/panel_header.php';
                     data-name="<?= e($name) ?>"
                     data-ini="<?= e(mb_substr($v['first_name'], 0, 1) . mb_substr($v['last_name'], 0, 1)) ?>"
                     data-ava="<?= $v['avatar'] ? e(url('uploads/avatars/' . $v['avatar'])) : '' ?>">
-              <?= e($name) ?> · <?= (int)$v['month_pts'] > 0 ? '+' . (int)$v['month_pts'] . ' за месяц' : e(positionLabel($v['position'])) ?>
+              <?= e($name) ?> · <?= (int)$v['month_pts'] > 0 ? '+' . (int)$v['month_pts'] . ' за месяц' : e(positionLabel($v['position'])) ?><?= (int)$v['public_consent'] === 1 ? '' : ' · нет согласия на публикацию' ?>
             </option>
           <?php endforeach; ?>
         </select>
-        <span class="hint">Сверху те, у кого больше баллов в этом месяце.</span>
+        <span class="hint">Сверху те, у кого больше баллов в этом месяце. Показать на сайте можно только того, кто дал согласие на публикацию имени и фото.</span>
       </div>
       <?php if ($candidates): ?>
         <div class="field">
