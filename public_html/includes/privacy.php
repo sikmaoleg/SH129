@@ -15,7 +15,7 @@
 const CONSENT_VERSION = '2026-10-08';
 
 /** Последняя версия структуры базы, которую ожидает код. */
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 /**
  * Досоздаёт недостающие поля и таблицы один раз после выкладки.
@@ -54,6 +54,13 @@ function ensureSchema(): void
                 KEY idx_user (user_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
             setSetting('schema_version', '1');
+        }
+        if ((int)fetchValue("SELECT value FROM settings WHERE `key` = 'schema_version'") < 2) {
+            // Версия 2: сайт закрывается до решения разработчика открыть его снова
+            // (Разработчик → Настройки → Режим работы сайта)
+            db()->exec("INSERT INTO settings (`key`, `value`) VALUES ('maintenance_mode', '1')
+                        ON DUPLICATE KEY UPDATE `value` = '1'");
+            setSetting('schema_version', '2');
         }
     } catch (Throwable $e) {
         error_log('ensureSchema: ' . $e->getMessage());

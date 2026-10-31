@@ -342,6 +342,8 @@
       syncLevels(); lvButtons(); if (dirty) dirty.hidden = false;
     });
     if (lvBox) lvButtons();
+    var mt = $('#maintenance_toggle');
+    if (mt) mt.addEventListener('change', function () { $('#maintenance_mode').value = mt.checked ? '1' : '0'; });
     var reg = $('#registration_toggle');
     if (reg) reg.addEventListener('change', function () { $('#registration_open').value = reg.checked ? '1' : '0'; });
     setForm.addEventListener('input', function () { if (dirty) dirty.hidden = false; syncLevels(); });

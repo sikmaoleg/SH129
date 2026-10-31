@@ -650,6 +650,7 @@ function logAction(string $action, ?string $entity = null, ?int $entityId = null
 
 require_once __DIR__ . '/icons.php';
 require_once __DIR__ . '/privacy.php';
+require_once __DIR__ . '/maintenance.php';
 try {
     ensureSchema();
     privacyHousekeeping();
@@ -657,3 +658,6 @@ try {
     error_log('privacy bootstrap: ' . $e->getMessage()); // например, во время установки, пока нет таблиц
 }
 require_once __DIR__ . '/auth.php';
+
+// Режим технических работ: после auth.php, потому что сотрудников пускаем по роли
+maintenanceGate();

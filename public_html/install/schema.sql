@@ -277,7 +277,8 @@ INSERT IGNORE INTO `hero_slides` (`image`,`caption`,`sort`) VALUES
 ('assets/img/rain.webp','Работаем в любую погоду',60);
 
 INSERT IGNORE INTO `settings` (`key`,`value`) VALUES
-('schema_version','1'),
+('schema_version','2'),
+('maintenance_mode','0'),
 ('org_name','Молодая Гвардия · Щёлково'),
 ('org_email','info@example.ru'),
 ('org_address','Московская область, г. Щёлково'),

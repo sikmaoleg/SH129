@@ -16,6 +16,7 @@ $editable = [
     'org_vk'             => ['Ссылка на ВКонтакте', 'text'],
     'org_tg'             => ['Ссылка на Telegram', 'text'],
     'registration_open'  => ['Приём заявок открыт (1 — да, 0 — нет)', 'text'],
+    'maintenance_mode'   => ['Режим технических работ (1 — сайт закрыт, 0 — открыт)', 'text'],
     'points_coordinator' => ['Баллов за координацию (ориентир)', 'number'],
     'level_thresholds'   => ['Пороги уровней через запятую', 'text'],
     'level_names'        => ['Названия уровней через запятую', 'text'],
@@ -85,6 +86,7 @@ require __DIR__ . '/../includes/panel_header.php';
     <a href="#set-reg">Приём заявок</a>
     <a href="#set-levels">Баллы и уровни</a>
     <a href="#set-stats">Цифры на главной</a>
+    <a href="#set-mode">Режим работы сайта</a>
     <a href="#set-legal">Персональные данные</a>
   </nav>
 
@@ -107,6 +109,17 @@ require __DIR__ . '/../includes/panel_header.php';
         <label class="switchbox">
           <span><b>Анкета открыта</b><small>Если выключить, форма вступления покажет, что приём временно закрыт</small></span>
           <input type="checkbox" id="registration_toggle" <?= setting('registration_open', '1') === '1' ? 'checked' : '' ?>><span class="toggle"></span>
+        </label>
+      </div>
+    </section>
+
+    <section class="card set-sec" id="set-mode">
+      <div class="card-h"><div><h2>Режим работы сайта</h2><p>Закрытый сайт видят только сотрудники, остальным показывается страница технических работ</p></div></div>
+      <div class="card-b">
+        <input type="hidden" id="maintenance_mode" name="maintenance_mode" value="<?= setting('maintenance_mode') === '1' ? '1' : '0' ?>">
+        <label class="switchbox">
+          <span><b>Сайт закрыт на технические работы</b><small>Посетители видят страницу «Сайт ушёл на субботник». Сотрудники входят как обычно.</small></span>
+          <input type="checkbox" id="maintenance_toggle" <?= setting('maintenance_mode') === '1' ? 'checked' : '' ?>><span class="toggle"></span>
         </label>
       </div>
     </section>
