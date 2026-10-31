@@ -7,7 +7,8 @@
 
 function maintenanceGate(): void
 {
-    if (PHP_SAPI === 'cli' || setting('maintenance_mode') !== '1') {
+    // Читаем напрямую: миграция могла закрыть сайт уже в этом запросе, а кэш настроек старый
+    if (PHP_SAPI === 'cli' || (string)fetchValue("SELECT `value` FROM settings WHERE `key` = 'maintenance_mode'") !== '1') {
         return;
     }
     $script = (string)($_SERVER['SCRIPT_NAME'] ?? '');

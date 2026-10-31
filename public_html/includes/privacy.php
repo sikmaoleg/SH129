@@ -17,9 +17,17 @@ const CONSENT_VERSION = '2026-10-08';
 /** Последняя версия структуры базы, которую ожидает код. */
 const SCHEMA_VERSION = 2;
 
+/** Есть ли колонка в таблице (работает и в MySQL 5.7, и в MariaDB). */
+function dbColumnExists(string $table, string $column): bool
+{
+    return (int)fetchValue('SELECT COUNT(*) FROM information_schema.COLUMNS
+                            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?', [$table, $column]) > 0;
+}
+
 /**
- * Досоздаёт недостающие поля и таблицы один раз после выкладки.
- * Без отдельных скриптов миграции: версия хранится в settings.schema_version.
+ * Досоздаёт недостающие поля и таблицы после выкладки. Без отдельных скриптов миграции.
+ * Шаги независимы: сначала закрытие сайта (работает даже если остальное не удалось),
+ * затем новые поля. Версия пишется только после успешного второго шага.
  */
 function ensureSchema(): void
 {
@@ -31,39 +39,48 @@ function ensureSchema(): void
         return;
     }
     try {
-        if ((int)fetchValue("SELECT value FROM settings WHERE `key` = 'schema_version'") < 1) {
-            db()->exec("ALTER TABLE users
-                ADD COLUMN IF NOT EXISTS pd_consent_at DATETIME NULL,
-                ADD COLUMN IF NOT EXISTS pd_consent_version VARCHAR(20) NULL,
-                ADD COLUMN IF NOT EXISTS public_consent TINYINT(1) NULL,
-                ADD COLUMN IF NOT EXISTS public_consent_at DATETIME NULL,
-                ADD COLUMN IF NOT EXISTS guardian_name VARCHAR(190) NULL,
-                ADD COLUMN IF NOT EXISTS guardian_phone VARCHAR(32) NULL,
-                ADD COLUMN IF NOT EXISTS guardian_consent_at DATETIME NULL");
-            db()->exec("CREATE TABLE IF NOT EXISTS consent_log (
-                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                user_id INT UNSIGNED NULL,
-                kind VARCHAR(32) NOT NULL,
-                action VARCHAR(16) NOT NULL,
-                version VARCHAR(20) NULL,
-                source VARCHAR(20) NOT NULL,
-                ip VARCHAR(45) NULL,
-                user_agent VARCHAR(255) NULL,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (id),
-                KEY idx_user (user_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-            setSetting('schema_version', '1');
-        }
-        if ((int)fetchValue("SELECT value FROM settings WHERE `key` = 'schema_version'") < 2) {
-            // Версия 2: сайт закрывается до решения разработчика открыть его снова
-            // (Разработчик → Настройки → Режим работы сайта)
+        // Шаг 1: сайт закрывается до решения разработчика открыть его (один раз)
+        if ((string)fetchValue("SELECT `value` FROM settings WHERE `key` = 'maintenance_v2'") !== '1') {
             db()->exec("INSERT INTO settings (`key`, `value`) VALUES ('maintenance_mode', '1')
                         ON DUPLICATE KEY UPDATE `value` = '1'");
-            setSetting('schema_version', '2');
+            db()->exec("INSERT INTO settings (`key`, `value`) VALUES ('maintenance_v2', '1')
+                        ON DUPLICATE KEY UPDATE `value` = '1'");
         }
     } catch (Throwable $e) {
-        error_log('ensureSchema: ' . $e->getMessage());
+        error_log('ensureSchema/maintenance: ' . $e->getMessage());
+    }
+    try {
+        // Шаг 2: поля согласий в users и журнал согласий
+        $columns = [
+            'pd_consent_at'       => 'DATETIME NULL',
+            'pd_consent_version'  => 'VARCHAR(20) NULL',
+            'public_consent'      => 'TINYINT(1) NULL',
+            'public_consent_at'   => 'DATETIME NULL',
+            'guardian_name'       => 'VARCHAR(190) NULL',
+            'guardian_phone'      => 'VARCHAR(32) NULL',
+            'guardian_consent_at' => 'DATETIME NULL',
+        ];
+        foreach ($columns as $name => $definition) {
+            if (!dbColumnExists('users', $name)) {
+                db()->exec("ALTER TABLE users ADD COLUMN `{$name}` {$definition}");
+            }
+        }
+        db()->exec("CREATE TABLE IF NOT EXISTS consent_log (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id INT UNSIGNED NULL,
+            kind VARCHAR(32) NOT NULL,
+            action VARCHAR(16) NOT NULL,
+            version VARCHAR(20) NULL,
+            source VARCHAR(20) NOT NULL,
+            ip VARCHAR(45) NULL,
+            user_agent VARCHAR(255) NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_user (user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        setSetting('schema_version', (string)SCHEMA_VERSION);
+    } catch (Throwable $e) {
+        error_log('ensureSchema/columns: ' . $e->getMessage());
     } finally {
         fetchValue("SELECT RELEASE_LOCK('mg_schema')");
     }
